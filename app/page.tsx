@@ -2,7 +2,20 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState, type TouchEvent } from "react";
-import { ceilingLights, ceilings, roomSizes, rooms, walls } from "@/lib/combinations";
+import {
+  accentWalls,
+  accessories,
+  backyards,
+  ceilingLights,
+  ceilings,
+  doorways,
+  fireplaces,
+  roomDividers,
+  roomSizes,
+  rooms,
+  stairways,
+  walls,
+} from "@/lib/combinations";
 
 type GeneratedImage = {
   b64_json?: string | null;
@@ -23,12 +36,33 @@ export default function Home() {
   const [selectedWalls, setSelectedWalls] = useState<string[]>([
     walls[0] ?? "white walls",
   ]);
+  const [selectedAccentWalls, setSelectedAccentWalls] = useState<string[]>([
+    accentWalls[0] ?? "deep charcoal fluted accent wall",
+  ]);
+  const [selectedDoorways, setSelectedDoorways] = useState<string[]>([
+    doorways[0] ?? "solid walnut wood doorway surround",
+  ]);
+  const [selectedStairways, setSelectedStairways] = useState<string[]>([
+    stairways[0] ?? "floating timber stairs with hidden supports",
+  ]);
+  const [selectedAccessories, setSelectedAccessories] = useState<string[]>([
+    accessories[0] ?? "oversized indoor olive tree in sculptural planter",
+  ]);
+  const [selectedRoomDividers, setSelectedRoomDividers] = useState<string[]>([
+    roomDividers[0] ?? "clear glass divider with slim black metal frame",
+  ]);
+  const [selectedFireplaces, setSelectedFireplaces] = useState<string[]>([
+    fireplaces[0] ?? "floor-to-ceiling statement fireplace",
+  ]);
   const [selectedCeilings, setSelectedCeilings] = useState<string[]>([
     ceilings[0] ?? "smooth white ceiling",
   ]);
   const [selectedCeilingLights, setSelectedCeilingLights] = useState<string[]>([
     ceilingLights[0] ?? "recessed downlights",
   ]);
+  const [selectedBackyard, setSelectedBackyard] = useState(
+    backyards[0] ?? "regular neighborhood home backyard"
+  );
   const [roomSize, setRoomSize] = useState(
     roomSizes[1] ?? "standard room (180-280 sq ft)"
   );
@@ -37,11 +71,18 @@ export default function Home() {
   const [maxImages, setMaxImages] = useState(12);
   const [isGenerating, setIsGenerating] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const generateAbortController = useRef<AbortController | null>(null);
   const swipeStartY = useRef<number | null>(null);
   const swipeCurrentY = useRef<number | null>(null);
 
   const allRoomsSelected = selectedRooms.length === rooms.length;
   const allWallsSelected = selectedWalls.length === walls.length;
+  const allAccentWallsSelected = selectedAccentWalls.length === accentWalls.length;
+  const allDoorwaysSelected = selectedDoorways.length === doorways.length;
+  const allStairwaysSelected = selectedStairways.length === stairways.length;
+  const allAccessoriesSelected = selectedAccessories.length === accessories.length;
+  const allRoomDividersSelected = selectedRoomDividers.length === roomDividers.length;
+  const allFireplacesSelected = selectedFireplaces.length === fireplaces.length;
   const allCeilingsSelected = selectedCeilings.length === ceilings.length;
   const allCeilingLightsSelected =
     selectedCeilingLights.length === ceilingLights.length;
@@ -63,6 +104,12 @@ export default function Home() {
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [fullscreenImage]);
+
+  useEffect(() => {
+    return () => {
+      generateAbortController.current?.abort();
+    };
+  }, []);
 
   function toggleRoom(room: string) {
     setSelectedRooms((previous) => {
@@ -101,6 +148,138 @@ export default function Home() {
   function toggleAllWalls() {
     setSelectedWalls((previous) =>
       previous.length === walls.length ? [walls[0] ?? "white walls"] : [...walls]
+    );
+  }
+
+  function toggleAccentWall(accentWallType: string) {
+    setSelectedAccentWalls((previous) => {
+      if (previous.includes(accentWallType)) {
+        if (previous.length === 1) {
+          return previous;
+        }
+
+        return previous.filter((value) => value !== accentWallType);
+      }
+
+      return [...previous, accentWallType];
+    });
+  }
+
+  function toggleAllAccentWalls() {
+    setSelectedAccentWalls((previous) =>
+      previous.length === accentWalls.length
+        ? [accentWalls[0] ?? "deep charcoal fluted accent wall"]
+        : [...accentWalls]
+    );
+  }
+
+  function toggleDoorway(doorwayType: string) {
+    setSelectedDoorways((previous) => {
+      if (previous.includes(doorwayType)) {
+        if (previous.length === 1) {
+          return previous;
+        }
+
+        return previous.filter((value) => value !== doorwayType);
+      }
+
+      return [...previous, doorwayType];
+    });
+  }
+
+  function toggleAllDoorways() {
+    setSelectedDoorways((previous) =>
+      previous.length === doorways.length
+        ? [doorways[0] ?? "solid walnut wood doorway surround"]
+        : [...doorways]
+    );
+  }
+
+  function toggleStairway(stairwayType: string) {
+    setSelectedStairways((previous) => {
+      if (previous.includes(stairwayType)) {
+        if (previous.length === 1) {
+          return previous;
+        }
+
+        return previous.filter((value) => value !== stairwayType);
+      }
+
+      return [...previous, stairwayType];
+    });
+  }
+
+  function toggleAllStairways() {
+    setSelectedStairways((previous) =>
+      previous.length === stairways.length
+        ? [stairways[0] ?? "floating timber stairs with hidden supports"]
+        : [...stairways]
+    );
+  }
+
+  function toggleAccessory(accessoryType: string) {
+    setSelectedAccessories((previous) => {
+      if (previous.includes(accessoryType)) {
+        if (previous.length === 1) {
+          return previous;
+        }
+
+        return previous.filter((value) => value !== accessoryType);
+      }
+
+      return [...previous, accessoryType];
+    });
+  }
+
+  function toggleAllAccessories() {
+    setSelectedAccessories((previous) =>
+      previous.length === accessories.length
+        ? [accessories[0] ?? "oversized indoor olive tree in sculptural planter"]
+        : [...accessories]
+    );
+  }
+
+  function toggleRoomDivider(roomDividerType: string) {
+    setSelectedRoomDividers((previous) => {
+      if (previous.includes(roomDividerType)) {
+        if (previous.length === 1) {
+          return previous;
+        }
+
+        return previous.filter((value) => value !== roomDividerType);
+      }
+
+      return [...previous, roomDividerType];
+    });
+  }
+
+  function toggleAllRoomDividers() {
+    setSelectedRoomDividers((previous) =>
+      previous.length === roomDividers.length
+        ? [roomDividers[0] ?? "clear glass divider with slim black metal frame"]
+        : [...roomDividers]
+    );
+  }
+
+  function toggleFireplace(fireplaceType: string) {
+    setSelectedFireplaces((previous) => {
+      if (previous.includes(fireplaceType)) {
+        if (previous.length === 1) {
+          return previous;
+        }
+
+        return previous.filter((value) => value !== fireplaceType);
+      }
+
+      return [...previous, fireplaceType];
+    });
+  }
+
+  function toggleAllFireplaces() {
+    setSelectedFireplaces((previous) =>
+      previous.length === fireplaces.length
+        ? [fireplaces[0] ?? "floor-to-ceiling statement fireplace"]
+        : [...fireplaces]
     );
   }
 
@@ -183,19 +362,31 @@ export default function Home() {
   }
 
   async function generate() {
+    generateAbortController.current?.abort();
+    const controller = new AbortController();
+    generateAbortController.current = controller;
+
     setIsGenerating(true);
 
     try {
       const response = await fetch("/generate", {
         method: "POST",
+        signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           rooms: selectedRooms,
           walls: selectedWalls,
+          accentWalls: selectedAccentWalls,
+          doorways: selectedDoorways,
+          stairways: selectedStairways,
+          accessories: selectedAccessories,
+          roomDividers: selectedRoomDividers,
+          fireplaces: selectedFireplaces,
           ceilings: selectedCeilings,
           ceilingLights: selectedCeilingLights,
+          backyard: selectedBackyard,
           roomSize,
           fileSize,
           aspectRatio,
@@ -244,11 +435,23 @@ export default function Home() {
 
       setImages(data.flatMap((item) => item.data ?? []));
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+
       console.error("Request failed:", error);
       setImages([]);
     } finally {
+      if (generateAbortController.current === controller) {
+        generateAbortController.current = null;
+      }
+
       setIsGenerating(false);
     }
+  }
+
+  function cancelGenerate() {
+    generateAbortController.current?.abort();
   }
 
   return (
@@ -327,6 +530,33 @@ export default function Home() {
         </fieldset>
 
         <fieldset className="border rounded px-3 py-2">
+          <legend className="text-sm px-1">Accent wall</legend>
+          <div className="flex flex-col gap-1 min-w-[260px]">
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={allAccentWallsSelected}
+                onChange={toggleAllAccentWalls}
+              />
+              All accent wall options
+            </label>
+            {accentWalls.map((accentWallType) => (
+              <label
+                key={accentWallType}
+                className="inline-flex items-center gap-2 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedAccentWalls.includes(accentWallType)}
+                  onChange={() => toggleAccentWall(accentWallType)}
+                />
+                {accentWallType}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset className="border rounded px-3 py-2">
           <legend className="text-sm px-1">Ceiling lights</legend>
           <div className="flex flex-col gap-1 min-w-[220px]">
             <label className="inline-flex items-center gap-2 text-sm">
@@ -347,6 +577,150 @@ export default function Home() {
                 {lightType}
               </label>
             ))}
+          </div>
+        </fieldset>
+
+        <fieldset className="border rounded px-3 py-2">
+          <legend className="text-sm px-1">Doorways</legend>
+          <div className="flex flex-col gap-1 min-w-[260px]">
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={allDoorwaysSelected}
+                onChange={toggleAllDoorways}
+              />
+              All doorway options
+            </label>
+            {doorways.map((doorwayType) => (
+              <label key={doorwayType} className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={selectedDoorways.includes(doorwayType)}
+                  onChange={() => toggleDoorway(doorwayType)}
+                />
+                {doorwayType}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset className="border rounded px-3 py-2">
+          <legend className="text-sm px-1">Stairways</legend>
+          <div className="flex flex-col gap-1 min-w-[280px]">
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={allStairwaysSelected}
+                onChange={toggleAllStairways}
+              />
+              All stairway options
+            </label>
+            {stairways.map((stairwayType) => (
+              <label key={stairwayType} className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={selectedStairways.includes(stairwayType)}
+                  onChange={() => toggleStairway(stairwayType)}
+                />
+                {stairwayType}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset className="border rounded px-3 py-2">
+          <legend className="text-sm px-1">Accessories</legend>
+          <div className="flex flex-col gap-1 min-w-[320px]">
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={allAccessoriesSelected}
+                onChange={toggleAllAccessories}
+              />
+              All accessory options
+            </label>
+            {accessories.map((accessoryType) => (
+              <label key={accessoryType} className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={selectedAccessories.includes(accessoryType)}
+                  onChange={() => toggleAccessory(accessoryType)}
+                />
+                {accessoryType}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset className="border rounded px-3 py-2">
+          <legend className="text-sm px-1">Room dividers</legend>
+          <div className="flex flex-col gap-1 min-w-[340px]">
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={allRoomDividersSelected}
+                onChange={toggleAllRoomDividers}
+              />
+              All room divider options
+            </label>
+            {roomDividers.map((roomDividerType) => (
+              <label key={roomDividerType} className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={selectedRoomDividers.includes(roomDividerType)}
+                  onChange={() => toggleRoomDivider(roomDividerType)}
+                />
+                {roomDividerType}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset className="border rounded px-3 py-2">
+          <legend className="text-sm px-1">Fireplaces</legend>
+          <div className="flex flex-col gap-1 min-w-[340px]">
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={allFireplacesSelected}
+                onChange={toggleAllFireplaces}
+              />
+              All fireplace options
+            </label>
+            {fireplaces.map((fireplaceType) => (
+              <label key={fireplaceType} className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={selectedFireplaces.includes(fireplaceType)}
+                  onChange={() => toggleFireplace(fireplaceType)}
+                />
+                {fireplaceType}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset className="border rounded px-3 py-2 min-w-[280px]">
+          <legend className="text-sm px-1">Backyard type</legend>
+          <div className="flex flex-col gap-2">
+            {backyards.map((backyard) => {
+              const isSelected = selectedBackyard === backyard;
+
+              return (
+                <button
+                  key={backyard}
+                  type="button"
+                  onClick={() => setSelectedBackyard(backyard)}
+                  className={`rounded border px-3 py-2 text-left text-sm transition ${
+                    isSelected
+                      ? "border-black bg-black text-white"
+                      : "border-zinc-300 bg-white text-black hover:bg-zinc-50"
+                  }`}
+                >
+                  {backyard}
+                </button>
+              );
+            })}
           </div>
         </fieldset>
 
@@ -422,6 +796,15 @@ export default function Home() {
           className="bg-black text-white px-4 py-2 disabled:opacity-50"
         >
           {isGenerating ? "Generating..." : "Generate"}
+        </button>
+
+        <button
+          type="button"
+          onClick={cancelGenerate}
+          disabled={!isGenerating}
+          className="border border-red-500 text-red-600 px-4 py-2 disabled:opacity-50"
+        >
+          Cancel
         </button>
       </div>
 

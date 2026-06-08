@@ -2,12 +2,18 @@ import { NextResponse } from "next/server";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  accentWalls,
+  accessories,
+  backyards,
   ceilingLights,
   ceilings,
+  doorways,
+  fireplaces,
+  roomDividers,
   roomSizes,
   rooms,
+  stairways,
   styles,
-  views,
   walls,
 } from "@/lib/combinations";
 import { buildPrompt } from "@/lib/promptBuilder";
@@ -215,8 +221,15 @@ export async function POST(request: Request) {
     let payload: {
       rooms?: string[];
       walls?: string[];
+      accentWalls?: string[];
+      doorways?: string[];
+      stairways?: string[];
+      accessories?: string[];
+      roomDividers?: string[];
+      fireplaces?: string[];
       ceilings?: string[];
       ceilingLights?: string[];
+      backyard?: string;
       roomSize?: string;
       fileSize?: FileSizeOption;
       aspectRatio?: AspectRatioOption;
@@ -227,8 +240,15 @@ export async function POST(request: Request) {
       payload = (await request.json()) as {
         rooms?: string[];
         walls?: string[];
+        accentWalls?: string[];
+        doorways?: string[];
+        stairways?: string[];
+        accessories?: string[];
+        roomDividers?: string[];
+        fireplaces?: string[];
         ceilings?: string[];
         ceilingLights?: string[];
+        backyard?: string;
         roomSize?: string;
         fileSize?: FileSizeOption;
         aspectRatio?: AspectRatioOption;
@@ -273,6 +293,78 @@ export async function POST(request: Request) {
     const wallSelection =
       selectedWalls.length > 0 ? selectedWalls : [walls[0] ?? "white walls"];
 
+    const selectedAccentWalls =
+      Array.isArray(payload.accentWalls)
+        ? payload.accentWalls.filter((accentWall): accentWall is string =>
+            typeof accentWall === "string" && accentWalls.includes(accentWall)
+          )
+        : [];
+
+    const accentWallSelection =
+      selectedAccentWalls.length > 0
+        ? selectedAccentWalls
+        : [accentWalls[0] ?? "deep charcoal fluted accent wall"];
+
+    const selectedDoorways =
+      Array.isArray(payload.doorways)
+        ? payload.doorways.filter((doorway): doorway is string =>
+            typeof doorway === "string" && doorways.includes(doorway)
+          )
+        : [];
+
+    const doorwaySelection =
+      selectedDoorways.length > 0
+        ? selectedDoorways
+        : [doorways[0] ?? "solid walnut wood doorway surround"];
+
+    const selectedStairways =
+      Array.isArray(payload.stairways)
+        ? payload.stairways.filter((stairway): stairway is string =>
+            typeof stairway === "string" && stairways.includes(stairway)
+          )
+        : [];
+
+    const stairwaySelection =
+      selectedStairways.length > 0
+        ? selectedStairways
+        : [stairways[0] ?? "floating timber stairs with hidden supports"];
+
+    const selectedAccessories =
+      Array.isArray(payload.accessories)
+        ? payload.accessories.filter((accessory): accessory is string =>
+            typeof accessory === "string" && accessories.includes(accessory)
+          )
+        : [];
+
+    const accessorySelection =
+      selectedAccessories.length > 0
+        ? selectedAccessories
+        : [accessories[0] ?? "oversized indoor olive tree in sculptural planter"];
+
+    const selectedRoomDividers =
+      Array.isArray(payload.roomDividers)
+        ? payload.roomDividers.filter((roomDivider): roomDivider is string =>
+            typeof roomDivider === "string" && roomDividers.includes(roomDivider)
+          )
+        : [];
+
+    const roomDividerSelection =
+      selectedRoomDividers.length > 0
+        ? selectedRoomDividers
+        : [roomDividers[0] ?? "clear glass divider with slim black metal frame"];
+
+    const selectedFireplaces =
+      Array.isArray(payload.fireplaces)
+        ? payload.fireplaces.filter((fireplace): fireplace is string =>
+            typeof fireplace === "string" && fireplaces.includes(fireplace)
+          )
+        : [];
+
+    const fireplaceSelection =
+      selectedFireplaces.length > 0
+        ? selectedFireplaces
+        : [fireplaces[0] ?? "floor-to-ceiling statement fireplace"];
+
     const selectedCeilings =
       Array.isArray(payload.ceilings)
         ? payload.ceilings.filter((ceilingType): ceilingType is string =>
@@ -302,6 +394,11 @@ export async function POST(request: Request) {
         ? payload.roomSize
         : (roomSizes[1] ?? "standard room (180-280 sq ft)");
 
+    const backyardSelection =
+      typeof payload.backyard === "string" && backyards.includes(payload.backyard)
+        ? payload.backyard
+        : (backyards[0] ?? "regular neighborhood home backyard");
+
     const maxImages =
       typeof payload.maxImages === "number" && Number.isInteger(payload.maxImages)
         ? Math.max(1, Math.min(payload.maxImages, ABSOLUTE_MAX_PROMPTS))
@@ -313,17 +410,21 @@ export async function POST(request: Request) {
 
     const prompts = roomSelection
       .flatMap((room) =>
-        styles.flatMap((style) =>
-          views.map((view) =>
-            buildPrompt(
-              room,
-              roomSizeSelection,
-              style,
-              view,
-              wallSelection,
-              ceilingSelection,
-              ceilingLightSelection
-            )
+        styles.map((style) =>
+          buildPrompt(
+            room,
+            roomSizeSelection,
+            style,
+            backyardSelection,
+            wallSelection,
+            accentWallSelection,
+            doorwaySelection,
+            stairwaySelection,
+            accessorySelection,
+            roomDividerSelection,
+            fireplaceSelection,
+            ceilingSelection,
+            ceilingLightSelection
           )
         )
       )
