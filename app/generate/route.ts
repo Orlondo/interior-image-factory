@@ -5,7 +5,17 @@ import {
   accentWalls,
   accessories,
   backyards,
+  basementFeatures,
+  homeBarFeatures,
+  homeGymFeatures,
+  pantryFeatures,
+  homeOfficeFeatures,
+  laundryRoomFeatures,
+  mudRoomFeatures,
+  walkInClosetFeatures,
+  cabinetStyles,
   ceilingLights,
+  homeTheaterFeatures,
   ceilings,
   doorways,
   fireplaces,
@@ -14,6 +24,7 @@ import {
   rooms,
   stairways,
   styles,
+  wallPaintColors,
   walls,
 } from "@/lib/combinations";
 import { buildPrompt } from "@/lib/promptBuilder";
@@ -28,12 +39,18 @@ const MAX_RATE_LIMIT_RETRIES = 5;
 
 type FileSizeOption = "small" | "medium" | "large";
 type AspectRatioOption = "1:1" | "4:5" | "9:16" | "16:9";
+type CharacterIntensityOption = "subtle" | "balanced" | "bold";
 type ImageData = {
   b64_json?: string | null;
 };
 
 type ImagesResponse = {
   data?: ImageData[];
+};
+
+type PromptError = Error & {
+  prompt?: string;
+  status?: number;
 };
 
 const FILE_SIZE_TO_QUALITY: Record<FileSizeOption, "low" | "medium" | "high"> = {
@@ -131,13 +148,15 @@ async function generateWithRateLimitRetry(
         throw error;
       }
 
+      const payload = { ...input, n: 1 };
+
       const response = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify(input),
+        body: JSON.stringify(payload),
       });
 
       const responseBody = await response.text();
@@ -225,14 +244,32 @@ export async function POST(request: Request) {
       doorways?: string[];
       stairways?: string[];
       accessories?: string[];
+      accessoryNotes?: Record<string, string>;
+      basementFeatures?: string[];
+      homeBarFeatures?: string[];
+      pantryFeatures?: string[];
+      homeOfficeFeatures?: string[];
+      laundryRoomFeatures?: string[];
+      mudRoomFeatures?: string[];
+      walkInClosetFeatures?: string[];
+      homeGymFeatures?: string[];
+      cabinetStyles?: string[];
+      cabinetColor?: string;
+      cabinetFinish?: string;
+      homeTheaterFeatures?: string[];
+      houseLevel?: string;
+      wallPaintColors?: string[];
       roomDividers?: string[];
       fireplaces?: string[];
       ceilings?: string[];
       ceilingLights?: string[];
       backyard?: string;
+      customRequest?: string;
+      customRequestCount?: number;
       roomSize?: string;
       fileSize?: FileSizeOption;
       aspectRatio?: AspectRatioOption;
+      characterIntensity?: CharacterIntensityOption;
       maxImages?: number;
     } = {};
 
@@ -244,14 +281,30 @@ export async function POST(request: Request) {
         doorways?: string[];
         stairways?: string[];
         accessories?: string[];
+        basementFeatures?: string[];
+        homeBarFeatures?: string[];
+        pantryFeatures?: string[];
+        homeOfficeFeatures?: string[];
+        laundryRoomFeatures?: string[];
+        mudRoomFeatures?: string[];
+        walkInClosetFeatures?: string[];
+        homeGymFeatures?: string[];
+        cabinetStyles?: string[];
+        cabinetColor?: string;
+        cabinetFinish?: string;
+        homeTheaterFeatures?: string[];
+        wallPaintColors?: string[];
         roomDividers?: string[];
         fireplaces?: string[];
         ceilings?: string[];
         ceilingLights?: string[];
         backyard?: string;
+        customRequest?: string;
+        customRequestCount?: number;
         roomSize?: string;
         fileSize?: FileSizeOption;
         aspectRatio?: AspectRatioOption;
+        characterIntensity?: CharacterIntensityOption;
         maxImages?: number;
       };
     } catch {
@@ -282,6 +335,9 @@ export async function POST(request: Request) {
 
     const roomSelection =
       selectedRooms.length > 0 ? selectedRooms : [rooms[0] ?? "living room"];
+
+    const hasBasementRoomSelected = roomSelection.includes("basement");
+    const hasTheaterRoomSelected = roomSelection.includes("in-home theater");
 
     const selectedWalls =
       Array.isArray(payload.walls)
@@ -336,10 +392,149 @@ export async function POST(request: Request) {
           )
         : [];
 
+    const selectedAccessoryNotes =
+      typeof payload.accessoryNotes === "object" && payload.accessoryNotes !== null
+        ? Object.fromEntries(
+            Object.entries(payload.accessoryNotes).filter(
+              ([accessory, note]) =>
+                typeof accessory === "string" &&
+                typeof note === "string" &&
+                selectedAccessories.includes(accessory)
+            )
+          ) as Record<string, string>
+        : {};
+
     const accessorySelection =
       selectedAccessories.length > 0
         ? selectedAccessories
         : [accessories[0] ?? "oversized indoor olive tree in sculptural planter"];
+
+    const accessoryDescriptionSelection = accessorySelection.map((accessory) => {
+      const note = selectedAccessoryNotes[accessory]?.trim();
+      return note ? `${accessory} (${note})` : accessory;
+    });
+
+    const selectedBasementFeatures =
+      Array.isArray(payload.basementFeatures)
+        ? payload.basementFeatures.filter((feature): feature is string =>
+            typeof feature === "string" && basementFeatures.includes(feature)
+          )
+        : [];
+
+    const basementFeatureSelection = hasBasementRoomSelected
+      ? selectedBasementFeatures.length > 0
+        ? selectedBasementFeatures
+        : [basementFeatures[0] ?? "finished basement lounge with rich textures"]
+      : [];
+
+    const hasHomeBarFeatureFilter = Array.isArray(payload.homeBarFeatures);
+
+    const selectedHomeBarFeatures = hasHomeBarFeatureFilter
+      ? payload.homeBarFeatures.filter((feature): feature is string =>
+          typeof feature === "string" && homeBarFeatures.includes(feature)
+        )
+      : [];
+
+    const homeBarFeatureSelection = hasHomeBarFeatureFilter
+      ? selectedHomeBarFeatures
+      : [homeBarFeatures[0] ?? "wet bar with quartz countertop and brass accents"];
+
+    const selectedHomeGymFeatures =
+      Array.isArray(payload.homeGymFeatures)
+        ? payload.homeGymFeatures.filter((feature): feature is string =>
+            typeof feature === "string" && homeGymFeatures.includes(feature)
+          )
+        : [];
+
+    const homeGymFeatureSelection =
+      selectedHomeGymFeatures.length > 0
+        ? selectedHomeGymFeatures
+        : [
+            homeGymFeatures[0] ??
+              "mirrored wall with rubber flooring and free weights",
+          ];
+
+    const selectedPantryFeatures =
+      Array.isArray(payload.pantryFeatures)
+        ? payload.pantryFeatures.filter((feature): feature is string =>
+            typeof feature === "string" && pantryFeatures.includes(feature)
+          )
+        : [];
+
+    const pantryFeatureSelection =
+      selectedPantryFeatures.length > 0
+        ? selectedPantryFeatures
+        : [pantryFeatures[0] ?? "walk-in pantry with open shelving and labeled containers"];
+
+    const selectedHomeOfficeFeatures =
+      Array.isArray(payload.homeOfficeFeatures)
+        ? payload.homeOfficeFeatures.filter((feature): feature is string =>
+            typeof feature === "string" && homeOfficeFeatures.includes(feature)
+          )
+        : [];
+
+    const homeOfficeFeatureSelection =
+      selectedHomeOfficeFeatures.length > 0
+        ? selectedHomeOfficeFeatures
+        : [homeOfficeFeatures[0] ?? "built-in desk with floating shelving and integrated task lighting"];
+
+    const selectedLaundryRoomFeatures =
+      Array.isArray(payload.laundryRoomFeatures)
+        ? payload.laundryRoomFeatures.filter((feature): feature is string =>
+            typeof feature === "string" && laundryRoomFeatures.includes(feature)
+          )
+        : [];
+
+    const laundryRoomFeatureSelection =
+      selectedLaundryRoomFeatures.length > 0
+        ? selectedLaundryRoomFeatures
+        : [
+            laundryRoomFeatures[0] ??
+              "stacked washer-dryer with folding counter and hanging rod",
+          ];
+
+    const selectedMudRoomFeatures =
+      Array.isArray(payload.mudRoomFeatures)
+        ? payload.mudRoomFeatures.filter((feature): feature is string =>
+            typeof feature === "string" && mudRoomFeatures.includes(feature)
+          )
+        : [];
+
+    const mudRoomFeatureSelection =
+      selectedMudRoomFeatures.length > 0
+        ? selectedMudRoomFeatures
+        : [mudRoomFeatures[0] ?? "built-in bench with cubbies and durable tile flooring"];
+
+    const selectedWalkInClosetFeatures =
+      Array.isArray(payload.walkInClosetFeatures)
+        ? payload.walkInClosetFeatures.filter((feature): feature is string =>
+            typeof feature === "string" && walkInClosetFeatures.includes(feature)
+          )
+        : [];
+
+    const walkInClosetFeatureSelection =
+      selectedWalkInClosetFeatures.length > 0
+        ? selectedWalkInClosetFeatures
+        : [
+            walkInClosetFeatures[0] ??
+              "custom walk-in closet with island and soft-close drawers",
+          ];
+
+    const selectedHomeTheaterFeatures =
+      Array.isArray(payload.homeTheaterFeatures)
+        ? payload.homeTheaterFeatures.filter((feature): feature is string =>
+            typeof feature === "string" && homeTheaterFeatures.includes(feature)
+          )
+        : [];
+
+    const homeTheaterFeatureSelection = hasTheaterRoomSelected
+      ? selectedHomeTheaterFeatures.length > 0
+        ? selectedHomeTheaterFeatures
+        : [
+            homeTheaterFeatures[0] ??
+              "large projection screen with surround sound",
+          ]
+      : [];
 
     const selectedRoomDividers =
       Array.isArray(payload.roomDividers)
@@ -353,17 +548,17 @@ export async function POST(request: Request) {
         ? selectedRoomDividers
         : [roomDividers[0] ?? "clear glass divider with slim black metal frame"];
 
-    const selectedFireplaces =
-      Array.isArray(payload.fireplaces)
-        ? payload.fireplaces.filter((fireplace): fireplace is string =>
-            typeof fireplace === "string" && fireplaces.includes(fireplace)
-          )
-        : [];
+    const hasFireplaceFilter = Array.isArray(payload.fireplaces);
 
-    const fireplaceSelection =
-      selectedFireplaces.length > 0
-        ? selectedFireplaces
-        : [fireplaces[0] ?? "floor-to-ceiling statement fireplace"];
+    const selectedFireplaces = hasFireplaceFilter
+      ? payload.fireplaces.filter((fireplace): fireplace is string =>
+          typeof fireplace === "string" && fireplaces.includes(fireplace)
+        )
+      : [];
+
+    const fireplaceSelection = hasFireplaceFilter
+      ? selectedFireplaces
+      : [fireplaces[0] ?? "floor-to-ceiling statement fireplace"];
 
     const selectedCeilings =
       Array.isArray(payload.ceilings)
@@ -389,6 +584,41 @@ export async function POST(request: Request) {
         ? selectedCeilingLights
         : [ceilingLights[0] ?? "recessed downlights"];
 
+    const selectedWallPaintColors =
+      Array.isArray(payload.wallPaintColors)
+        ? payload.wallPaintColors.filter((color): color is string =>
+            typeof color === "string" && wallPaintColors.includes(color)
+          )
+        : [];
+
+    const wallPaintColorSelection =
+      selectedWallPaintColors.length > 0
+        ? selectedWallPaintColors
+        : [wallPaintColors[0] ?? "soft dove gray paint"];
+
+    const selectedCabinetStyles =
+      Array.isArray(payload.cabinetStyles)
+        ? payload.cabinetStyles.filter((cabinetStyle): cabinetStyle is string =>
+            typeof cabinetStyle === "string" && cabinetStyles.includes(cabinetStyle)
+          )
+        : [];
+
+    const cabinetColor =
+      typeof payload.cabinetColor === "string" && payload.cabinetColor.length > 0
+        ? payload.cabinetColor
+        : "matte white";
+
+    const cabinetFinish =
+      typeof payload.cabinetFinish === "string" && payload.cabinetFinish.length > 0
+        ? payload.cabinetFinish
+        : "white lacquer finish";
+
+    const houseLevelSelection =
+      typeof payload.houseLevel === "string" &&
+      ["builder grade", "mid-level", "luxury"].includes(payload.houseLevel)
+        ? payload.houseLevel
+        : "builder grade";
+
     const roomSizeSelection =
       typeof payload.roomSize === "string" && roomSizes.includes(payload.roomSize)
         ? payload.roomSize
@@ -399,53 +629,344 @@ export async function POST(request: Request) {
         ? payload.backyard
         : (backyards[0] ?? "regular neighborhood home backyard");
 
+    const customRequest =
+      typeof payload.customRequest === "string"
+        ? payload.customRequest.trim()
+        : "";
+
+    const requestedCustomCount =
+      typeof payload.customRequestCount === "number" && Number.isInteger(payload.customRequestCount)
+        ? Math.max(0, Math.min(payload.customRequestCount, ABSOLUTE_MAX_PROMPTS))
+        : DEFAULT_MAX_PROMPTS;
+
     const maxImages =
       typeof payload.maxImages === "number" && Number.isInteger(payload.maxImages)
         ? Math.max(1, Math.min(payload.maxImages, ABSOLUTE_MAX_PROMPTS))
         : DEFAULT_MAX_PROMPTS;
 
+    const characterIntensitySelection: CharacterIntensityOption =
+      payload.characterIntensity === "subtle" ||
+      payload.characterIntensity === "balanced" ||
+      payload.characterIntensity === "bold"
+        ? payload.characterIntensity
+        : "balanced";
+
     const quality = FILE_SIZE_TO_QUALITY[fileSize];
     const size = FILE_SIZE_AND_ASPECT_TO_SIZE[fileSize][aspectRatio];
     const fallbackSize = FALLBACK_ASPECT_RATIO_TO_SIZE[aspectRatio];
 
-    const prompts = roomSelection
-      .flatMap((room) =>
-        styles.map((style) =>
-          buildPrompt(
-            room,
-            roomSizeSelection,
-            style,
-            backyardSelection,
-            wallSelection,
-            accentWallSelection,
-            doorwaySelection,
-            stairwaySelection,
-            accessorySelection,
-            roomDividerSelection,
-            fireplaceSelection,
-            ceilingSelection,
-            ceilingLightSelection
-          )
-        )
-      )
-      .slice(0, maxImages);
+    const defaultRoom = roomSelection[0];
+    const defaultWall = wallSelection[0];
+    const defaultAccentWall = accentWallSelection[0];
+    const defaultDoorway = doorwaySelection[0];
+    const defaultStairway = stairwaySelection[0];
+    const defaultAccessory = accessorySelection[0];
+    const defaultRoomDivider = roomDividerSelection[0];
+    const defaultFireplace =
+      fireplaceSelection[0] ?? "no dedicated fireplace feature";
+    const defaultCeiling = ceilingSelection[0];
+    const defaultCeilingLight = ceilingLightSelection[0];
+    const defaultWallPaintColor = wallPaintColorSelection[0];
+    const defaultBasementFeature =
+      basementFeatureSelection[0] ?? "finished basement lounge with rich textures";
+    const defaultHomeTheaterFeature =
+      homeTheaterFeatureSelection[0] ?? "large projection screen with surround sound";
+    const defaultHomeBarFeature =
+      homeBarFeatureSelection[0] ?? "no dedicated home bar feature";
+    const defaultHomeGymFeature = homeGymFeatureSelection[0];
+    const defaultCabinetStyle = selectedCabinetStyles[0] ?? "shaker-style cabinetry";
+    const defaultCabinetColor = cabinetColor;
+    const defaultCabinetFinish = cabinetFinish;
+
+    const totalRequiredItems =
+      roomSelection.length +
+      wallSelection.length +
+      accentWallSelection.length +
+      doorwaySelection.length +
+      stairwaySelection.length +
+      accessorySelection.length +
+      basementFeatureSelection.length +
+      homeTheaterFeatureSelection.length +
+      homeBarFeatureSelection.length +
+      pantryFeatureSelection.length +
+      homeOfficeFeatureSelection.length +
+      laundryRoomFeatureSelection.length +
+      homeGymFeatureSelection.length +
+      roomDividerSelection.length +
+      fireplaceSelection.length +
+      ceilingSelection.length +
+      ceilingLightSelection.length +
+      wallPaintColorSelection.length +
+      selectedCabinetStyles.length;
+
+    const effectiveMaxImages = Math.min(
+      ABSOLUTE_MAX_PROMPTS,
+      Math.max(maxImages, totalRequiredItems)
+    );
+
+    const buildPromptFor = (
+      {
+        room = defaultRoom,
+        style = styles[0],
+        wallType = defaultWall,
+        accentWallType = defaultAccentWall,
+        doorway = defaultDoorway,
+        stairway = defaultStairway,
+        accessory = defaultAccessory,
+        basementFeature = defaultBasementFeature,
+        homeTheaterFeature = defaultHomeTheaterFeature,
+        homeBarFeature = defaultHomeBarFeature,
+        homeGymFeature = defaultHomeGymFeature,
+        pantryFeature = pantryFeatureSelection[0],
+        homeOfficeFeature = homeOfficeFeatureSelection[0],
+        laundryRoomFeature = laundryRoomFeatureSelection[0],
+        mudRoomFeature = mudRoomFeatureSelection[0],
+        walkInClosetFeature = walkInClosetFeatureSelection[0],
+        roomDivider = defaultRoomDivider,
+        fireplace = defaultFireplace,
+        ceiling = defaultCeiling,
+        ceilingLight = defaultCeilingLight,
+        wallPaintColor = defaultWallPaintColor,
+        cabinetStyleSelection = defaultCabinetStyle,
+        cabinetColorSelection = defaultCabinetColor,
+        cabinetFinishSelection = defaultCabinetFinish,
+      }: {
+        room?: string;
+        style?: string;
+        wallType?: string;
+        accentWallType?: string;
+        doorway?: string;
+        stairway?: string;
+        accessory?: string;
+        basementFeature?: string;
+        homeTheaterFeature?: string;
+        homeBarFeature?: string;
+        homeGymFeature?: string;
+        pantryFeature?: string;
+        homeOfficeFeature?: string;
+        laundryRoomFeature?: string;
+        mudRoomFeature?: string;
+        walkInClosetFeature?: string;
+        roomDivider?: string;
+        fireplace?: string;
+        ceiling?: string;
+        ceilingLight?: string;
+        wallPaintColor?: string;
+        cabinetStyleSelection?: string;
+        cabinetColorSelection?: string;
+        cabinetFinishSelection?: string;
+      },
+      requestOverride = customRequest
+    ) =>
+      buildPrompt(
+        room,
+        roomSizeSelection,
+        style,
+        backyardSelection,
+        requestOverride,
+        [wallType],
+        [accentWallType],
+        [doorway],
+        [stairway],
+        [accessory],
+        [basementFeature],
+        [homeTheaterFeature],
+        [homeBarFeature],
+        [homeGymFeature],
+        [pantryFeature],
+        [homeOfficeFeature],
+        [laundryRoomFeature],
+        [mudRoomFeature],
+        [walkInClosetFeature],
+        [roomDivider],
+        [fireplace],
+        [ceiling],
+        [ceilingLight],
+        [wallPaintColor],
+        cabinetStyleSelection,
+        cabinetColorSelection,
+        cabinetFinishSelection,
+        houseLevelSelection,
+        characterIntensitySelection
+      );
+
+    const prompts: string[] = [];
+    const seen = new Set<string>();
+
+    const addPrompt = (prompt: string): boolean => {
+      if (!seen.has(prompt) && prompts.length < effectiveMaxImages) {
+        seen.add(prompt);
+        prompts.push(prompt);
+        return true;
+      }
+
+      return false;
+    };
+
+    const requestedPromptCandidates: string[] = [];
+    const basePromptCandidates: string[] = [];
+
+    const collectPrompts = (request: string, target: string[]) => {
+      let styleCursor = 0;
+      let doorwayCursor = 0;
+      const nextStyle = () => {
+        const selectedStyle = styles[styleCursor % styles.length] ?? styles[0] ?? "warm modern luxury";
+        styleCursor += 1;
+        return selectedStyle;
+      };
+
+      const nextDoorway = () => {
+        const selectedDoorway =
+          doorwaySelection[doorwayCursor % doorwaySelection.length] ?? defaultDoorway;
+        doorwayCursor += 1;
+        return selectedDoorway;
+      };
+
+      for (const room of roomSelection) {
+        target.push(buildPromptFor({ room, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const wallType of wallSelection) {
+        target.push(buildPromptFor({ wallType, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const accentWallType of accentWallSelection) {
+        target.push(buildPromptFor({ accentWallType, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const doorway of doorwaySelection) {
+        target.push(buildPromptFor({ doorway, style: nextStyle() }, request));
+      }
+      for (const stairway of stairwaySelection) {
+        target.push(buildPromptFor({ stairway, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const accessory of accessoryDescriptionSelection) {
+        target.push(buildPromptFor({ accessory, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const basementFeature of basementFeatureSelection) {
+        target.push(buildPromptFor({ basementFeature, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const homeTheaterFeature of homeTheaterFeatureSelection) {
+        target.push(buildPromptFor({ homeTheaterFeature, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const homeBarFeature of homeBarFeatureSelection) {
+        target.push(buildPromptFor({ homeBarFeature, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const homeGymFeature of homeGymFeatureSelection) {
+        target.push(buildPromptFor({ homeGymFeature, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const pantryFeature of pantryFeatureSelection) {
+        target.push(buildPromptFor({ pantryFeature, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const homeOfficeFeature of homeOfficeFeatureSelection) {
+        target.push(buildPromptFor({ homeOfficeFeature, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const laundryRoomFeature of laundryRoomFeatureSelection) {
+        target.push(buildPromptFor({ laundryRoomFeature, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const mudRoomFeature of mudRoomFeatureSelection) {
+        target.push(buildPromptFor({ mudRoomFeature, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const walkInClosetFeature of walkInClosetFeatureSelection) {
+        target.push(buildPromptFor({ walkInClosetFeature, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const roomDivider of roomDividerSelection) {
+        target.push(buildPromptFor({ roomDivider, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const fireplace of fireplaceSelection) {
+        target.push(buildPromptFor({ fireplace, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const ceiling of ceilingSelection) {
+        target.push(buildPromptFor({ ceiling, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const ceilingLight of ceilingLightSelection) {
+        target.push(buildPromptFor({ ceilingLight, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const wallPaintColor of wallPaintColorSelection) {
+        target.push(buildPromptFor({ wallPaintColor, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+      for (const cabinetStyleSelection of selectedCabinetStyles) {
+        target.push(buildPromptFor({ cabinetStyleSelection, style: nextStyle(), doorway: nextDoorway() }, request));
+      }
+
+      const interleaved = styles.flatMap((style) =>
+        roomSelection.map((room) => ({ room, style }))
+      );
+
+      for (const { room, style } of interleaved) {
+        target.push(buildPromptFor({ room, style, doorway: nextDoorway() }, request));
+      }
+    };
+
+    if (customRequest && requestedCustomCount > 0) {
+      collectPrompts(customRequest, requestedPromptCandidates);
+    }
+    collectPrompts("", basePromptCandidates);
+
+    const requestedCount = Math.min(requestedCustomCount, effectiveMaxImages);
+    let addedRequested = 0;
+
+    for (const prompt of requestedPromptCandidates) {
+      if (addedRequested >= requestedCount) break;
+      if (addPrompt(prompt)) {
+        addedRequested += 1;
+      }
+    }
+
+    for (const prompt of basePromptCandidates) {
+      if (prompts.length >= effectiveMaxImages) break;
+      addPrompt(prompt);
+    }
 
     const results: ImagesResponse[] = [];
 
-    for (let i = 0; i < prompts.length; i += CONCURRENCY) {
-      const batch = prompts.slice(i, i + CONCURRENCY);
-      const batchResults = await Promise.all(
-        batch.map((prompt) =>
-          generateImageWithFallback(prompt, quality, size, fallbackSize)
-        )
-      );
-
-      results.push(...batchResults);
-    }
-
     await mkdir(OUTPUT_DIR, { recursive: true });
 
-    const runId = Date.now();
+    const generationRunId = Date.now();
+
+    for (let i = 0; i < prompts.length; i += CONCURRENCY) {
+      const batch = prompts.slice(i, i + CONCURRENCY);
+
+      // Enrich per-prompt errors so we can log which prompt caused a safety rejection
+      const batchPromises = batch.map((prompt) =>
+        generateImageWithFallback(prompt, quality, size, fallbackSize).catch((err) => {
+          const e: PromptError = err instanceof Error ? err : new Error(String(err));
+          // attach the prompt for context
+          e.prompt = prompt;
+          throw e;
+        })
+      );
+
+      try {
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults);
+      } catch (err) {
+        // If the API rejected a prompt (safety system), log the prompt and the error
+        const error: PromptError = err instanceof Error ? err : new Error(String(err));
+        const offendingPrompt = error.prompt ?? "<unknown prompt>";
+        const timestamp = new Date().toISOString();
+        const logContent = `Time: ${timestamp}\nError: ${error.message}\nPrompt:\n${offendingPrompt}\n\nStack:\n${error.stack ?? "<no stack>"}\n`;
+        const logName = `failed-prompt-${generationRunId}.txt`;
+        const logPath = path.join(OUTPUT_DIR, logName);
+
+        try {
+          await writeFile(logPath, logContent, { encoding: "utf8" });
+        } catch (writeErr) {
+          console.error("Failed to write failed-prompt log:", writeErr);
+        }
+
+        // If the error contains a request id, include it in the client-facing message
+        const match = /req_[0-9a-fA-F]+/i.exec(error.message);
+        const requestId = match ? match[0] : undefined;
+
+        const clientMessage = requestId
+          ? `Image generation blocked by safety filter (request id: ${requestId}). The exact prompt has been saved to ${logName}.`
+          : `Image generation failed: ${error.message}. The exact prompt has been saved to ${logName}.`;
+
+        const clientError = new Error(clientMessage) as Error & { status?: number };
+        clientError.status = error.status ?? 500;
+        throw clientError;
+      }
+    }
+
+    const runId = generationRunId;
 
     await Promise.all(
       results.flatMap((result, resultIndex) =>
