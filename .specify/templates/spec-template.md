@@ -103,6 +103,18 @@
 - **[Entity 1]**: [What it represents, key attributes without implementation]
 - **[Entity 2]**: [What it represents, relationships to other entities]
 
+### Constitution Alignment *(mandatory)*
+
+- **CA-001 (Clean Code)**: Describe how the feature keeps implementation units
+  focused and maintainable, including modular structure and Next.js best
+  practices where applicable.
+- **CA-002 (Simple UI)**: Describe how the feature avoids unnecessary UI
+  complexity and preserves clear defaults.
+- **CA-003 (Responsive Design)**: Describe expected behavior for mobile and
+  desktop usage.
+- **CA-004 (Minimal Dependencies)**: List any new dependency and justification,
+  or state "No new dependencies".
+
 ## Success Criteria *(mandatory)*
 
 <!--

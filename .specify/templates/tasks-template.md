@@ -157,6 +157,11 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
 - [ ] TXXX Security hardening
 - [ ] TXXX Run quickstart.md validation
+- [ ] TXXX Constitution compliance check: clean code standards reviewed
+- [ ] TXXX Constitution compliance check: Next.js best practices reviewed
+- [ ] TXXX Constitution compliance check: simple UI behavior validated
+- [ ] TXXX Constitution compliance check: responsive behavior validated
+- [ ] TXXX Constitution compliance check: dependency additions justified
 
 ---
 

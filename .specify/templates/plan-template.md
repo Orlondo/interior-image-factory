@@ -40,7 +40,16 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- Clean Code First: Design keeps modules/components single-purpose and limits
+  complexity hotspots.
+- Clean Code First: Plan documents how Next.js App Router and route-handler
+  best practices are followed.
+- Simple UI By Default: UX flow minimizes control confusion and uses safe
+  defaults.
+- Responsive Design Required: Plan includes mobile + desktop layout behavior
+  validation.
+- Minimal Dependencies Policy: New dependency additions are justified and
+  alternatives considered.
 
 ## Project Structure
 

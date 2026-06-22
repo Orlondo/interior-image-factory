@@ -1,50 +1,96 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+- Version change: 1.0.0 -> 1.0.1
+- Modified principles:
+	- I. Clean Code First -> I. Clean Code First
+- Added sections:
+	- None
+- Removed sections:
+	- None
+- Templates requiring updates:
+	- ✅ .specify/templates/plan-template.md
+	- ✅ .specify/templates/spec-template.md
+	- ✅ .specify/templates/tasks-template.md
+	- ⚠ pending: .specify/templates/commands/*.md (directory not present)
+- Deferred items:
+	- None
+-->
+
+# Interior Image Factory Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Clean Code First
+All production code MUST be readable, intentionally named, and bounded in
+complexity. Functions and components MUST have a clear single responsibility,
+and dead code or speculative abstractions MUST NOT be merged. Modules MUST be
+organized around cohesive responsibilities and reuse common logic rather than
+duplicating behavior.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+When implementing in this repository, code MUST follow current Next.js best
+practices for App Router structure, data fetching, server/client boundaries,
+and route-handler conventions.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+Rationale: This project evolves quickly; maintainability and safe iteration
+depend on code clarity and low cognitive load.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. Simple UI By Default
+UI changes MUST prioritize clarity and task completion over novelty. New
+controls MUST be understandable without documentation, and defaults MUST be
+safe for first-time users.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+Rationale: The product is configuration-heavy. Simple UI decisions reduce user
+error and support faster experimentation.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### III. Responsive Design Required
+All user-facing layouts MUST remain functional on common mobile and desktop
+viewport sizes. New features MUST preserve tap targets, readable text, and
+usable control flow at small widths.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+Rationale: Users run image-generation workflows from mixed devices; broken
+responsive behavior directly reduces feature usefulness.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+### IV. Minimal Dependencies Policy
+New dependencies MUST be justified by clear value that cannot be met by the
+existing stack or small internal utilities. Dependency additions MUST include
+scope impact review and MUST avoid redundant libraries.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+Rationale: Smaller dependency surface reduces security risk, upgrade churn, and
+runtime complexity.
+
+## Engineering Standards
+
+- TypeScript strictness and lint cleanliness are required gates for completion.
+- API payload validation MUST be explicit for user-provided options.
+- Prompt or generation logic changes MUST preserve deterministic defaults where
+	possible.
+- Next.js changes MUST use framework-native patterns before introducing custom
+	abstractions.
+
+## Workflow And Quality Gates
+
+- Every feature task MUST map to a user-visible outcome and include validation.
+- PR review MUST confirm compliance with all four core principles.
+- Responsive checks and dependency impact checks MUST be included in review
+	notes when relevant.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes local conventions when conflicts occur.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+Amendment process:
+- Propose a change in a PR with rationale and impacted templates/files.
+- Obtain maintainer approval before merge.
+- Record semantic version updates in this file.
+
+Versioning policy:
+- MAJOR: incompatible governance changes or principle removals/redefinitions.
+- MINOR: new principle/section or materially expanded guidance.
+- PATCH: clarifications and editorial improvements without policy change.
+
+Compliance review expectations:
+- Plan, spec, and tasks artifacts MUST reflect current principles.
+- Runtime implementation reviews MUST check clean code, simple UI,
+	responsiveness, and dependency minimalism.
+
+**Version**: 1.0.1 | **Ratified**: 2026-06-09 | **Last Amended**: 2026-06-10
