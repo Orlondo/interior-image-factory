@@ -1,0 +1,83 @@
+Time: 2026-06-22T00:25:08.794Z
+Error: Billing hard limit has been reached.
+Prompt:
+
+Functional warm modern luxury kitchen pantry with practical builder-grade residential styling and accessible finishes.
+
+Design Direction:
+- Builder-grade residential design, practical, compact, and cost-conscious
+- Calm, composed atmosphere with appropriate proportions
+- Bespoke millwork and seamless built-ins when appropriate
+- Practical materials: affordable wood veneers, laminate, painted MDF, and standard fixtures
+- Compact, functional floor plans with smaller separate rooms rather than a grand open plan
+- Simple suburban or inner-city home layout under 1,500 square feet when builder-grade is selected
+- Room sizes should feel cozy: 150-300 square foot spaces for builder-grade rooms
+- Accessory direction: textured ceramic vase grouping on a console, arranged with intention and visual balance
+- Accessories should feel intentional and not cluttered
+- Specific request: can you give me some unique shaped accent walls. i would like to add all different types light fixtures to the living rooms spaces.
+- Room size direction: standard room (180-280 sq ft); architecture, furniture scale, circulation space, and camera composition should match this size faithfully
+- Wall treatment direction: soft dove gray paint, applied tastefully and cohesively with the architecture
+- Basement feature direction: finished basement lounge with rich textures
+- Home theater direction: large projection screen with surround sound
+ - Home bar direction: wet bar with quartz countertop and brass accents
+ - Home gym direction: mirrored wall with rubber flooring and free weights
+ - Pantry direction: walk-in pantry with open shelving and labeled containers
+ - Home office direction: built-in desk with floating shelving and integrated task lighting
+ - Laundry room direction: stacked washer-dryer with folding counter and hanging rod
+ - Mud room direction: built-in bench with cubbies and durable tile flooring
+ - Walk-in closet direction: custom walk-in closet with island and soft-close drawers
+- Accent wall direction: deep charcoal fluted accent wall, with color and pattern integrated as a focused design statement
+- Doorway direction: solid walnut wood doorway surround
+- Stairway direction: floating timber stairs with hidden supports
+- Cabinetry direction: shaker-style cabinetry, flat-panel modern cabinetry, slab-front cabinetry, paneled inset cabinetry and luxury framed cabinetry in matte white with white lacquer finish, seamlessly integrated into the overall design
+- Room divider direction: clear glass divider with slim black metal frame
+- Fireplace direction: traditional mantel fireplace with classic detailing
+- Ceiling treatment direction: smooth white ceiling
+- Ceiling lighting direction: recessed downlights, straightforward and functional
+- Avoid grand open-plan layouts and floor-to-ceiling glazing when builder-grade is selected
+ - Avoid grand open-plan layouts; use appropriately scaled, regular-sized windows when builder-grade is selected
+- Clean lines, minimal clutter
+
+Lighting:
+- Soft natural daylight, cinematic diffusion as appropriate
+- Bright, even daylight with straightforward recessed or pendant fixtures
+- HDR photoreal rendering, physically accurate materials
+
+Camera:
+- Wide interior composition, straight verticals, professional framing
+- Editorial photography look appropriate to the house level
+- High detail, tack-sharp focus, realistic photographic qualities
+
+Backyard view:
+- regular neighborhood home backyard, framed through windows or sliding doors with realistic depth
+
+Negative cues:
+- No cartoon look, no CGI plastic surfaces, no over-saturation, no distortion, no clutter
+
+
+Stack:
+Error: Billing hard limit has been reached.
+    at generateWithRateLimitRetry (C:\Users\Perri\Repos\interior-image-factory\.next\dev\server\chunks\[root-of-the-server]__02lg04o._.js:591:31)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async generateImageWithFallback (C:\Users\Perri\Repos\interior-image-factory\.next\dev\server\chunks\[root-of-the-server]__02lg04o._.js:610:33)
+    at async Promise.all (index 2)
+    at async POST (C:\Users\Perri\Repos\interior-image-factory\.next\dev\server\chunks\[root-of-the-server]__02lg04o._.js:984:38)
+    at async AppRouteRouteModule.do (C:\Users\Perri\Repos\interior-image-factory\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:40115)
+    at async AppRouteRouteModule.handle (C:\Users\Perri\Repos\interior-image-factory\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:47395)
+    at async responseGenerator (C:\Users\Perri\Repos\interior-image-factory\.next\dev\server\chunks\node_modules_next_0l1utx-._.js:16497:38)
+    at async AppRouteRouteModule.handleResponse (C:\Users\Perri\Repos\interior-image-factory\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:228552)
+    at async handleResponse (C:\Users\Perri\Repos\interior-image-factory\.next\dev\server\chunks\node_modules_next_0l1utx-._.js:16560:32)
+    at async Module.handler (C:\Users\Perri\Repos\interior-image-factory\.next\dev\server\chunks\node_modules_next_0l1utx-._.js:16614:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\Users\Perri\Repos\interior-image-factory\node_modules\next\dist\server\base-server.js:1462:9)
+    at async DevServer.renderPageComponent (C:\Users\Perri\Repos\interior-image-factory\node_modules\next\dist\server\base-server.js:1514:24)
+    at async DevServer.renderToResponseImpl (C:\Users\Perri\Repos\interior-image-factory\node_modules\next\dist\server\base-server.js:1564:32)
+    at async DevServer.pipeImpl (C:\Users\Perri\Repos\interior-image-factory\node_modules\next\dist\server\base-server.js:1044:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\Users\Perri\Repos\interior-image-factory\node_modules\next\dist\server\next-server.js:338:17)
+    at async DevServer.handleRequestImpl (C:\Users\Perri\Repos\interior-image-factory\node_modules\next\dist\server\base-server.js:935:17)
+    at async C:\Users\Perri\Repos\interior-image-factory\node_modules\next\dist\server\dev\next-dev-server.js:394:20
+    at async Span.traceAsyncFn (C:\Users\Perri\Repos\interior-image-factory\node_modules\next\dist\trace\trace.js:164:20)
+    at async DevServer.handleRequest (C:\Users\Perri\Repos\interior-image-factory\node_modules\next\dist\server\dev\next-dev-server.js:390:24)
+    at async invokeRender (C:\Users\Perri\Repos\interior-image-factory\node_modules\next\dist\server\lib\router-server.js:266:21)
+    at async handleRequest (C:\Users\Perri\Repos\interior-image-factory\node_modules\next\dist\server\lib\router-server.js:465:24)
+    at async requestHandlerImpl (C:\Users\Perri\Repos\interior-image-factory\node_modules\next\dist\server\lib\router-server.js:514:13)
+    at async Server.requestListener (C:\Users\Perri\Repos\interior-image-factory\node_modules\next\dist\server\lib\start-server.js:225:13)
