@@ -102,8 +102,7 @@ function shouldUseLegacyNeutralGuardrails(input: {
 }): boolean {
   return (
     input.colorStrategy === "Neutral Base" ||
-    input.colorCoverage === "Decor Only" ||
-    clampColorIntensity(input.colorIntensity) <= 20
+    input.colorCoverage === "Decor Only"
   );
 }
 

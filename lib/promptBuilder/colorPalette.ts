@@ -26,8 +26,24 @@ export type ColorPreviewData = {
   colorStrategy: ColorStrategy;
   colorCoverage: ColorCoverage;
   colorIntensity: number;
+  primary: string;
+  secondary: string;
+  complementaryAccent: string;
+  neutralGrounding: string;
+  woodTone: string;
+  metalFinish: string;
   variationNumber: number;
   variationTotal: number;
+};
+
+type PaletteStory = {
+  primary: string;
+  secondary: string;
+  complementaryAccent: string;
+  neutralGrounding: string;
+  woodTone: string;
+  metalFinish: string;
+  contrastTone: string;
 };
 
 const MAJOR_SURFACES =
@@ -46,6 +62,15 @@ const LEGACY_TO_FAMILY_MAP: Record<string, HeroColor> = {
   Mustard: "Warm Mixed",
   Gold: "Jewel Tone Mixed",
   Mixed: "Designer Mixed",
+};
+
+const COMPLEMENTARY_COLOR_MAP: Record<string, readonly string[]> = {
+  sage: ["terracotta", "rust", "clay", "muted blush", "ochre", "warm brass"],
+  olive: ["clay", "burgundy", "cream", "dark bronze", "muted gold"],
+  terracotta: ["sage", "olive", "cream", "charcoal", "aged brass"],
+  navy: ["camel", "rust", "brass", "ivory", "walnut"],
+  teal: ["ochre", "gold", "sand", "walnut", "cream"],
+  burgundy: ["blush", "cream", "olive", "walnut", "brass"],
 };
 
 const FAMILY_PALETTES: Record<HeroColor, readonly PaletteVariant[]> = {
@@ -377,6 +402,75 @@ function clampColorIntensity(colorIntensity: number): number {
   return Math.max(0, Math.min(100, Math.round(colorIntensity)));
 }
 
+function getHueKey(value: string): keyof typeof COMPLEMENTARY_COLOR_MAP | null {
+  const lower = value.toLowerCase();
+
+  if (lower.includes("sage")) {
+    return "sage";
+  }
+
+  if (lower.includes("olive") || lower.includes("moss") || lower.includes("eucalyptus")) {
+    return "olive";
+  }
+
+  if (
+    lower.includes("terracotta") ||
+    lower.includes("clay") ||
+    lower.includes("rust") ||
+    lower.includes("sienna")
+  ) {
+    return "terracotta";
+  }
+
+  if (lower.includes("teal") || lower.includes("petrol")) {
+    return "teal";
+  }
+
+  if (lower.includes("navy") || lower.includes("deep blue") || lower.includes("ink blue")) {
+    return "navy";
+  }
+
+  if (lower.includes("burgundy") || lower.includes("plum") || lower.includes("aubergine")) {
+    return "burgundy";
+  }
+
+  return null;
+}
+
+function buildPaletteStory(
+  palette: SelectedPalette,
+  imageIndex: number,
+  autoPaletteVariation: boolean
+): PaletteStory {
+  const primary = palette.primary;
+  const secondary = palette.secondary;
+  const neutralGrounding = palette.neutralBase;
+  const woodTone = palette.woodTone;
+  const metalFinish = palette.metalAccent;
+  const contrastTone = palette.tertiary;
+
+  const hueKey = getHueKey(primary) ?? getHueKey(secondary);
+  const complementaryCandidates =
+    (hueKey && COMPLEMENTARY_COLOR_MAP[hueKey]) ||
+    ["soft charcoal", "terracotta", "muted ochre", "aged brass", "warm ivory"];
+
+  const complementaryIndex = autoPaletteVariation
+    ? imageIndex % complementaryCandidates.length
+    : 0;
+
+  const complementaryAccent = complementaryCandidates[complementaryIndex] ?? complementaryCandidates[0] ?? "soft charcoal";
+
+  return {
+    primary,
+    secondary,
+    complementaryAccent,
+    neutralGrounding,
+    woodTone,
+    metalFinish,
+    contrastTone,
+  };
+}
+
 function shouldUseLegacyNeutralGuardrails(input: {
   colorStrategy: ColorStrategy;
   colorCoverage: ColorCoverage;
@@ -384,8 +478,7 @@ function shouldUseLegacyNeutralGuardrails(input: {
 }): boolean {
   return (
     input.colorStrategy === "Neutral Base" ||
-    input.colorCoverage === "Decor Only" ||
-    clampColorIntensity(input.colorIntensity) <= 20
+    input.colorCoverage === "Decor Only"
   );
 }
 
@@ -450,18 +543,18 @@ export function getIntensityDirective(colorIntensity: number): string {
   const intensity = clampColorIntensity(colorIntensity);
 
   if (intensity <= 20) {
-    return `Color intensity ${intensity}/100: minimal color with restrained accents and subtle palette traces.`;
+    return `Color intensity ${intensity}/100: minimal color distribution with restrained accents. Keep all palette roles (primary, secondary, complementary accent, neutral grounding, wood, and metal) present in subtle ways.`;
   }
 
   if (intensity <= 50) {
-    return `Color intensity ${intensity}/100: balanced palette presence across furniture, textiles, and selected surfaces.`;
+    return `Color intensity ${intensity}/100: balanced palette distribution across furniture, textiles, and selected surfaces.`;
   }
 
   if (intensity <= 80) {
-    return `Color intensity ${intensity}/100: expressive palette presence across architecture and furnishings.`;
+    return `Color intensity ${intensity}/100: expressive palette distribution across architecture and furnishings.`;
   }
 
-  return `Color intensity ${intensity}/100: strong designer palette with clear room-wide continuity.`;
+  return `Color intensity ${intensity}/100: strong designer palette with clear room-wide continuity and visible complementary accents.`;
 }
 
 export function getStrategyDirective(
@@ -486,6 +579,10 @@ export function getStrategyDirective(
 
   if (colorStrategy === "Color Drenched") {
     return "Strategy Color Drenched: spread palette color across major surfaces with curated upscale restraint.";
+  }
+
+  if (colorStrategy === "Accent Color") {
+    return "Strategy Accent Color: keep one dominant primary color and one clear complementary accent color visible. Accent Color does not mean single-color output.";
   }
 
   if (useNeutralGuardrails) {
@@ -551,7 +648,7 @@ export function getHeroColorDirective(heroColor: HeroColor, palette: SelectedPal
     return `Palette family Auto: use the mood-curated family ${palette.family} with balanced color leadership.`;
   }
 
-  return `Palette family ${family}: influence this variation with ${palette.primary}, ${palette.secondary}, and ${palette.tertiary} without forcing a single-color room.`;
+  return `Palette family ${family}: influence this variation with layered primary, secondary, complementary accent, and contrast tones without forcing a single-color room.`;
 }
 
 export function generatePaletteVariation(
@@ -569,7 +666,7 @@ export function generatePaletteVariation(
     return `Variation ${sequencePosition}/${input.maxImages}: keep ${palette.name} as the anchor palette with nuanced material and tonal changes.`;
   }
 
-  return `Variation ${sequencePosition}/${input.maxImages}: rotate to ${palette.name} while preserving ${palette.family} family cohesion and ${input.colorStrategy} strategy intent.`;
+  return `Variation ${sequencePosition}/${input.maxImages}: rotate both primary and complementary accent colors through ${palette.family} while preserving ${input.colorStrategy} strategy intent.`;
 }
 
 export function getColorPreviewData(input: {
@@ -590,12 +687,24 @@ export function getColorPreviewData(input: {
     autoPaletteVariation: input.autoPaletteVariation,
   });
 
+  const paletteStory = buildPaletteStory(
+    palette,
+    input.autoPaletteVariation ? input.imageIndex : 0,
+    input.autoPaletteVariation
+  );
+
   return {
     paletteFamily: palette.family,
     selectedPalette: palette.name,
     colorStrategy: input.colorStrategy,
     colorCoverage: input.colorCoverage,
     colorIntensity: clampColorIntensity(input.colorIntensity),
+    primary: paletteStory.primary,
+    secondary: paletteStory.secondary,
+    complementaryAccent: paletteStory.complementaryAccent,
+    neutralGrounding: paletteStory.neutralGrounding,
+    woodTone: paletteStory.woodTone,
+    metalFinish: paletteStory.metalFinish,
     variationNumber: (input.imageIndex % Math.max(1, input.maxImages)) + 1,
     variationTotal: Math.max(1, input.maxImages),
   };
@@ -619,6 +728,12 @@ export function buildColorPaletteDirective(input: {
     imageIndex: input.autoPaletteVariation ? input.imageIndex : 0,
     autoPaletteVariation: input.autoPaletteVariation,
   });
+
+  const paletteStory = buildPaletteStory(
+    palette,
+    input.autoPaletteVariation ? input.imageIndex : 0,
+    input.autoPaletteVariation
+  );
 
   const strategyDirective = getStrategyDirective(
     input.colorStrategy,
@@ -646,5 +761,5 @@ export function buildColorPaletteDirective(input: {
     maxImages: input.maxImages,
   });
 
-  return `Color system: mood ${input.colorMood}; strategy ${input.colorStrategy}; coverage ${input.colorCoverage}; style ${input.style}. Selected palette family ${palette.family}. Selected palette ${palette.name}: primary ${palette.primary}, secondary ${palette.secondary}, tertiary ${palette.tertiary}, neutral base ${palette.neutralBase}, wood ${palette.woodTone}, metal ${palette.metalAccent}. Palette source: ${palette.source}. ${strategyDirective} ${coverageDirective} ${architecturalSurfaceDirective} ${heroDirective} ${intensityDirective} ${variationDirective} ${paletteEvolutionDirective} Keep output realistic, upscale, and materially coherent. Avoid beige/cream/greige collapse unless neutral guardrails are explicitly active.`;
+  return `Color system: mood ${input.colorMood}; strategy ${input.colorStrategy}; coverage ${input.colorCoverage}; style ${input.style}. Selected palette family ${palette.family}. Selected palette ${palette.name}. Palette source: ${palette.source}. Required layered palette roles for this image: Primary ${paletteStory.primary}; Secondary ${paletteStory.secondary}; Complementary Accent ${paletteStory.complementaryAccent}; Neutral Grounding ${paletteStory.neutralGrounding}; Wood Tone ${paletteStory.woodTone}; Metal Finish ${paletteStory.metalFinish}; Contrast Tone ${paletteStory.contrastTone}. ${strategyDirective} ${coverageDirective} ${architecturalSurfaceDirective} ${heroDirective} ${intensityDirective} ${variationDirective} ${paletteEvolutionDirective} Keep output realistic, upscale, and materially coherent. Intensity controls amount of color application, not the number of palette roles. Never collapse to two-color schemes like green + beige, blue + gray, red + cream, sage + oak, or terracotta + cream.`;
 }

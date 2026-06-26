@@ -914,24 +914,24 @@ export default function Home() {
   return (
     <main className="mx-auto max-w-7xl overflow-x-hidden px-4 py-6 text-[#F5F7FA] sm:px-6 lg:px-10">
       <div className="space-y-4">
-        <section className="rounded-[20px] border border-[#262B36] bg-[#171A21] px-4 py-4">
+        <section className="rounded-[20px] border border-[#262B36] bg-[#171A21] px-4 py-4 sm:px-5 sm:py-5">
           <h2 className="text-sm font-semibold">Main Prompt Setup</h2>
-          <div className="mt-3 flex flex-wrap items-start gap-4">
-            <RoomTypePicker
-              selectedRooms={selectedRooms}
-              roomTypeCategories={roomTypeCategories}
-              allRooms={rooms}
-              onToggleRoom={toggleRoomCard}
-            />
+          <div className="mt-4 grid grid-cols-1 gap-4 md:[grid-template-columns:repeat(auto-fit,minmax(clamp(16rem,42vw,24rem),1fr))] lg:gap-5">
+            <div className="lg:col-span-2">
+              <RoomTypePicker
+                selectedRooms={selectedRooms}
+                roomTypeCategories={roomTypeCategories}
+                allRooms={rooms}
+                onToggleRoom={toggleRoomCard}
+              />
+            </div>
 
-            <div className="w-full min-w-0 lg:max-w-[380px] lg:flex-1">
-              <label className="flex min-w-0 items-center gap-3">
-                <span className="w-28 shrink-0 text-sm font-medium text-[#98A2B3]">
-                  Interior Design Style
-                </span>
+            <div className="min-w-0">
+              <label className="flex min-w-0 flex-col gap-2">
+                <span className="text-sm font-medium text-[#98A2B3]">Interior Design Style</span>
                 <select
                   aria-label="Interior design style"
-                  className="h-[42px] min-w-0 flex-1 rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
+                  className="h-[42px] w-full rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
                   value={designStyle}
                   onChange={(event) => setDesignStyle(event.target.value)}
                 >
@@ -944,14 +944,12 @@ export default function Home() {
               </label>
             </div>
 
-            <div className="w-full min-w-0 lg:max-w-[380px] lg:flex-1">
-              <label className="flex min-w-0 items-center gap-3">
-                <span className="w-28 shrink-0 text-sm font-medium text-[#98A2B3]">
-                  Color Mood
-                </span>
+            <div className="min-w-0">
+              <label className="flex min-w-0 flex-col gap-2">
+                <span className="text-sm font-medium text-[#98A2B3]">Color Mood</span>
                 <select
                   aria-label="Color mood"
-                  className="h-[42px] min-w-0 flex-1 rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
+                  className="h-[42px] w-full rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
                   value={colorMood}
                   onChange={(event) => setColorMood(event.target.value as ColorMood)}
                 >
@@ -964,14 +962,12 @@ export default function Home() {
               </label>
             </div>
 
-            <div className="w-full min-w-0 lg:max-w-[380px] lg:flex-1">
-              <label className="flex min-w-0 items-center gap-3">
-                <span className="w-28 shrink-0 text-sm font-medium text-[#98A2B3]">
-                  Color Strategy
-                </span>
+            <div className="min-w-0">
+              <label className="flex min-w-0 flex-col gap-2">
+                <span className="text-sm font-medium text-[#98A2B3]">Color Strategy</span>
                 <select
                   aria-label="Color strategy"
-                  className="h-[42px] min-w-0 flex-1 rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
+                  className="h-[42px] w-full rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
                   value={colorStrategy}
                   onChange={(event) =>
                     setColorStrategy(event.target.value as ColorStrategy)
@@ -986,14 +982,12 @@ export default function Home() {
               </label>
             </div>
 
-            <div className="w-full min-w-0 lg:max-w-[380px] lg:flex-1">
-              <label className="flex min-w-0 items-center gap-3">
-                <span className="w-28 shrink-0 text-sm font-medium text-[#98A2B3]">
-                  Palette Family
-                </span>
+            <div className="min-w-0">
+              <label className="flex min-w-0 flex-col gap-2">
+                <span className="text-sm font-medium text-[#98A2B3]">Palette Family</span>
                 <select
                   aria-label="Palette family"
-                  className="h-[42px] min-w-0 flex-1 rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
+                  className="h-[42px] w-full rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
                   value={heroColor}
                   onChange={(event) => setHeroColor(event.target.value as HeroColor)}
                 >
@@ -1006,14 +1000,12 @@ export default function Home() {
               </label>
             </div>
 
-            <div className="w-full min-w-0 lg:max-w-[380px] lg:flex-1">
-              <label className="flex min-w-0 items-center gap-3">
-                <span className="w-28 shrink-0 text-sm font-medium text-[#98A2B3]">
-                  Home Quality
-                </span>
+            <div className="min-w-0">
+              <label className="flex min-w-0 flex-col gap-2">
+                <span className="text-sm font-medium text-[#98A2B3]">Home Quality</span>
                 <select
                   aria-label="Home quality"
-                  className="h-[42px] min-w-0 flex-1 rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
+                  className="h-[42px] w-full rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
                   value={homeQuality}
                   onChange={(event) => setHomeQuality(event.target.value as HomeQuality)}
                 >
@@ -1029,12 +1021,10 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="w-full min-w-0 lg:max-w-[380px] lg:flex-1">
-              <label className="flex min-w-0 items-center gap-3">
-                <span className="w-28 shrink-0 text-sm font-medium text-[#98A2B3]">
-                  Color Intensity
-                </span>
-                <div className="min-w-0 flex-1 rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2">
+            <div className="min-w-0">
+              <label className="flex min-w-0 flex-col gap-2">
+                <span className="text-sm font-medium text-[#98A2B3]">Color Intensity</span>
+                <div className="w-full rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2">
                   <input
                     aria-label="Color intensity"
                     type="range"
@@ -1045,9 +1035,9 @@ export default function Home() {
                     onChange={(event) => setColorIntensity(Number(event.target.value))}
                     className="h-2 w-full accent-[#4F8CFF]"
                   />
-                  <div className="mt-2 flex items-center justify-between text-xs text-[#98A2B3]">
+                  <div className="mt-2 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 text-xs text-[#98A2B3]">
                     <span>{COLOR_INTENSITY_MIN}</span>
-                    <span className="font-medium text-[#F5F7FA]">
+                    <span className="truncate text-center font-medium text-[#F5F7FA]">
                       {colorIntensity} ({colorIntensityLevel})
                     </span>
                     <span>{COLOR_INTENSITY_MAX}</span>
@@ -1067,14 +1057,12 @@ export default function Home() {
               </label>
             </div>
 
-            <div className="w-full min-w-0 lg:max-w-[380px] lg:flex-1">
-              <label className="flex min-w-0 items-center gap-3">
-                <span className="w-28 shrink-0 text-sm font-medium text-[#98A2B3]">
-                  Color Coverage
-                </span>
+            <div className="min-w-0">
+              <label className="flex min-w-0 flex-col gap-2">
+                <span className="text-sm font-medium text-[#98A2B3]">Color Coverage</span>
                 <select
                   aria-label="Color coverage"
-                  className="h-[42px] min-w-0 flex-1 rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
+                  className="h-[42px] w-full rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
                   value={colorCoverage}
                   onChange={(event) => setColorCoverage(event.target.value as ColorCoverage)}
                 >
@@ -1087,47 +1075,51 @@ export default function Home() {
               </label>
             </div>
 
-            <label className="flex min-w-0 w-full items-center gap-3 sm:max-w-[320px] sm:flex-1">
-              <span className="w-28 shrink-0 text-sm font-medium text-[#98A2B3]">Aspect ratio</span>
-              <select
-                className="h-[42px] min-w-0 flex-1 rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
-                value={aspectRatio}
-                onChange={(event) =>
-                  setAspectRatio(event.target.value as AspectRatioOption)
-                }
-              >
-                <option value="1:1">1:1 (Instagram Post)</option>
-                <option value="4:5">4:5 (Instagram Portrait)</option>
-                <option value="9:16">9:16 (Story / Reels)</option>
-                <option value="16:9">16:9 (Landscape / YouTube)</option>
-              </select>
-            </label>
+            <div className="min-w-0">
+              <label className="flex min-w-0 flex-col gap-2">
+                <span className="text-sm font-medium text-[#98A2B3]">Aspect ratio</span>
+                <select
+                  className="h-[42px] w-full rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
+                  value={aspectRatio}
+                  onChange={(event) =>
+                    setAspectRatio(event.target.value as AspectRatioOption)
+                  }
+                >
+                  <option value="1:1">1:1 (Instagram Post)</option>
+                  <option value="4:5">4:5 (Instagram Portrait)</option>
+                  <option value="9:16">9:16 (Story / Reels)</option>
+                  <option value="16:9">16:9 (Landscape / YouTube)</option>
+                </select>
+              </label>
+            </div>
 
-            <label className="flex min-w-0 w-full items-center gap-3 sm:max-w-[320px] sm:flex-1">
-              <span className="w-28 shrink-0 text-sm font-medium text-[#98A2B3]">Max images</span>
-              <select
-                className="h-[42px] min-w-0 flex-1 rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
-                value={maxImages}
-                onChange={(event) =>
-                  setMaxImages(Number(event.target.value))
-                }
-              >
-                <option value={4}>4</option>
-                <option value={8}>8</option>
-                <option value={12}>12</option>
-                <option value={16}>16</option>
-                <option value={20}>20</option>
-                <option value={24}>24</option>
-                <option value={32}>32</option>
-                <option value={50}>50</option>
-                <option value={75}>75</option>
-                <option value={100}>100</option>
-              </select>
-            </label>
+            <div className="min-w-0">
+              <label className="flex min-w-0 flex-col gap-2">
+                <span className="text-sm font-medium text-[#98A2B3]">Max images</span>
+                <select
+                  className="h-[42px] w-full rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
+                  value={maxImages}
+                  onChange={(event) =>
+                    setMaxImages(Number(event.target.value))
+                  }
+                >
+                  <option value={4}>4</option>
+                  <option value={8}>8</option>
+                  <option value={12}>12</option>
+                  <option value={16}>16</option>
+                  <option value={20}>20</option>
+                  <option value={24}>24</option>
+                  <option value={32}>32</option>
+                  <option value={50}>50</option>
+                  <option value={75}>75</option>
+                  <option value={100}>100</option>
+                </select>
+              </label>
+            </div>
           </div>
         </section>
 
-        <section className="space-y-2">
+        <section className="w-full space-y-2">
           <CollapsibleSection
             title="Optional Details"
             collapsedSummary={`${optionalCustomizationCount} customizations selected`}
@@ -1153,17 +1145,17 @@ export default function Home() {
           </CollapsibleSection>
         </section>
 
-        <section className="space-y-2">
+        <section className="w-full space-y-2">
           <CollapsibleSection
             title="Layout Details"
             collapsedSummary={roomSize}
             isOpen={isLayoutDetailsOpen}
             onToggle={() => setIsLayoutDetailsOpen((previous) => !previous)}
           >
-            <label className="flex flex-col gap-2">
+            <label className="flex w-full flex-col gap-2">
               <span className="text-sm font-medium text-[#98A2B3]">Room size</span>
               <select
-                className="h-[42px] rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
+                className="h-[42px] w-full rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
                 value={roomSize}
                 onChange={(event) =>
                   setRoomSize(event.target.value)
@@ -1179,17 +1171,17 @@ export default function Home() {
           </CollapsibleSection>
         </section>
 
-        <section className="space-y-2">
+        <section className="w-full space-y-2">
           <CollapsibleSection
             title="Advanced Settings"
             collapsedSummary={advancedSettingsSummary}
             isOpen={isAdvancedSettingsOpen}
             onToggle={() => setIsAdvancedSettingsOpen((previous) => !previous)}
           >
-            <label className="flex flex-col gap-2">
+            <label className="flex w-full flex-col gap-2">
               <span className="text-sm font-medium text-[#98A2B3]">File size</span>
               <select
-                className="h-[42px] rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
+                className="h-[42px] w-full rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
                 value={fileSize}
                 onChange={(event) =>
                   setFileSize(event.target.value as FileSizeOption)
@@ -1201,7 +1193,7 @@ export default function Home() {
               </select>
             </label>
 
-            <label className="inline-flex h-[42px] items-center gap-2 rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA]">
+            <label className="inline-flex h-[42px] w-full items-center gap-2 rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA]">
               <input
                 type="checkbox"
                 checked={randomizeWallColor}
@@ -1277,6 +1269,12 @@ export default function Home() {
                 <p>Strategy: {promptPreviewColorData.colorStrategy}</p>
                 <p>Coverage: {promptPreviewColorData.colorCoverage}</p>
                 <p>Intensity: {promptPreviewColorData.colorIntensity}</p>
+                <p>Primary: {promptPreviewColorData.primary}</p>
+                <p>Secondary: {promptPreviewColorData.secondary}</p>
+                <p>Complementary Accent: {promptPreviewColorData.complementaryAccent}</p>
+                <p>Neutral: {promptPreviewColorData.neutralGrounding}</p>
+                <p>Wood Tone: {promptPreviewColorData.woodTone}</p>
+                <p>Metal Finish: {promptPreviewColorData.metalFinish}</p>
               </div>
               <pre className="max-h-[340px] overflow-auto rounded-[16px] border border-[#262B36] bg-[#0F1115] p-4 text-xs leading-5 text-[#D6DAE3] whitespace-pre-wrap">
                 {promptPreview}
@@ -1284,11 +1282,11 @@ export default function Home() {
             </CollapsibleSection>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-3">
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
               onClick={generate}
               disabled={isGenerating}
-              className="h-[42px] rounded-[10px] border border-[#4F8CFF] bg-[#4F8CFF] px-4 py-2 text-sm font-semibold text-[#F5F7FA] transition hover:bg-[#3E79EB] disabled:opacity-50"
+              className="h-[42px] w-full rounded-[10px] border border-[#4F8CFF] bg-[#4F8CFF] px-4 py-2 text-sm font-semibold text-[#F5F7FA] transition hover:bg-[#3E79EB] disabled:opacity-50 sm:w-auto"
             >
               {isGenerating ? "Generating..." : "Generate"}
             </button>
@@ -1296,7 +1294,7 @@ export default function Home() {
             <button
               onClick={cancelGeneration}
               disabled={!isGenerating}
-              className="h-[42px] rounded-[10px] border border-[#EF4444] bg-transparent px-4 py-2 text-sm font-semibold text-[#EF4444] transition hover:bg-[#EF4444]/10 disabled:opacity-50"
+              className="h-[42px] w-full rounded-[10px] border border-[#EF4444] bg-transparent px-4 py-2 text-sm font-semibold text-[#EF4444] transition hover:bg-[#EF4444]/10 disabled:opacity-50 sm:w-auto"
             >
               Cancel
             </button>
@@ -1304,7 +1302,8 @@ export default function Home() {
         </section>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mt-10">
+      <div className="mt-10 border-t border-[#262B36]/60 pt-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {images.map((img, i) => {
           const imageSrc = `data:image/png;base64,${img.b64_json}`;
 
@@ -1326,6 +1325,7 @@ export default function Home() {
             </button>
           );
         })}
+        </div>
       </div>
 
       {activeReviewImageSrc ? (

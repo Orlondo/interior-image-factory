@@ -40,9 +40,9 @@ export function CollapsibleSection({
         type="button"
         onClick={handleToggle}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 text-left"
+        className="flex w-full flex-wrap items-center justify-between gap-2 text-left"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <span className="text-xs text-[#98A2B3]" aria-hidden="true">
             {open ? "▾" : "▸"}
           </span>
@@ -50,9 +50,9 @@ export function CollapsibleSection({
         </div>
 
         {typeof selectedCount === "number" ? (
-          <span className="text-xs text-[#98A2B3]">{selectedCount} selected</span>
+          <span className="shrink-0 text-xs text-[#98A2B3]">{selectedCount} selected</span>
         ) : !open && collapsedSummary ? (
-          <span className="text-xs text-[#98A2B3]">{collapsedSummary}</span>
+          <span className="shrink-0 text-xs text-[#98A2B3]">{collapsedSummary}</span>
         ) : null}
       </button>
 

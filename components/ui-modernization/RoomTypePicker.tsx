@@ -111,9 +111,9 @@ export function RoomTypePicker({
 
   return (
     <div className="w-full">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium text-[#98A2B3]">Room Type</p>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {selectedRooms.length === 0 ? (
             <button
               type="button"

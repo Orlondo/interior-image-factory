@@ -21,7 +21,7 @@ export function ChipGroup({
   ariaLabel,
 }: ChipGroupProps) {
   return (
-    <div className="flex flex-wrap gap-2" role="group" aria-label={ariaLabel}>
+    <div className="flex flex-wrap items-start gap-2" role="group" aria-label={ariaLabel}>
       {options.map((option) => {
         const selected = selectedValues.includes(option.value);
         const chipClass = selected
@@ -34,7 +34,7 @@ export function ChipGroup({
             type="button"
             aria-pressed={selected}
             onClick={() => onToggleValue(option.value)}
-            className={`rounded-full border px-3 py-2 text-sm font-medium transition ${chipClass} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F8CFF]`}
+            className={`max-w-full rounded-full border px-3 py-2 text-left text-sm font-medium transition whitespace-normal break-words ${chipClass} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F8CFF]`}
           >
             {selected ? (
               <span
