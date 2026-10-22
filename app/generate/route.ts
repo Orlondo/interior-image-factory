@@ -19,9 +19,7 @@ import {
   type ColorStrategy,
   focalPoints,
   heroColors,
-  legacyHeroColors,
   type HeroColor,
-  type LegacyHeroColor,
   homeQualities,
   type RoomType,
   roomSizes,
@@ -34,6 +32,10 @@ import {
 } from "@/lib/combinations";
 import { submitImageBatchJob } from "@/lib/openaiBatch";
 import { buildPrompt } from "../../lib/promptBuilder";
+import {
+  getDefaultWallColorPalette,
+  getWallColorRandomPool,
+} from "@/lib/wallColorPalette";
 
 const OUTPUT_DIR = path.join(process.cwd(), "output");
 const DEFAULT_MAX_PROMPTS = 12;
@@ -274,46 +276,6 @@ function validateGeneratePayloadShape(payload: unknown): string[] {
   return errors;
 }
 
-function getDefaultWallColorPalette(colorProfileSelection: string[]): string {
-  const selectedProfiles = new Set(colorProfileSelection);
-  const earthyOnlySelection =
-    colorProfileSelection.length === 1 &&
-    selectedProfiles.has("earthy saturated palette");
-
-  if (earthyOnlySelection) {
-    return (
-      wallColorPalettes.find((palette) => palette.includes("earthy warm mix")) ??
-      "earthy warm mix (sand, clay, terracotta, olive)"
-    );
-  }
-
-  if (selectedProfiles.has("high-contrast palette")) {
-    return (
-      wallColorPalettes.find((palette) => palette.includes("high-contrast mix")) ??
-      "high-contrast mix (white, black, and one strong accent color)"
-    );
-  }
-
-  if (selectedProfiles.has("rich color-forward palette")) {
-    return (
-      wallColorPalettes.find((palette) => palette.includes("coastal blue mix")) ??
-      "coastal blue mix (powder blue, dusty navy, soft teal, white trim)"
-    );
-  }
-
-  if (selectedProfiles.has("soft pastel palette")) {
-    return (
-      wallColorPalettes.find((palette) => palette.includes("blush and rose mix")) ??
-      "blush and rose mix (blush pink, rose beige, warm ivory, soft taupe)"
-    );
-  }
-
-  return (
-    wallColorPalettes.find((palette) => palette.includes("cool contemporary mix")) ??
-    "cool contemporary mix (white, gray, slate blue, charcoal accents)"
-  );
-}
-
 function normalizePaletteFamilyFromPayload(heroColor: string | undefined): HeroColor {
   if (!heroColor) {
     return HERO_COLOR_DEFAULT;
@@ -323,51 +285,8 @@ function normalizePaletteFamilyFromPayload(heroColor: string | undefined): HeroC
     return heroColor as HeroColor;
   }
 
-  const legacyToFamily: Record<LegacyHeroColor, HeroColor> = {
-    "Deep Blue": "Cool Mixed",
-    Teal: "Cool Mixed",
-    Emerald: "Jewel Tone Mixed",
-    Olive: "Earthy Mixed",
-    Sage: "Earthy Mixed",
-    Terracotta: "Warm Mixed",
-    Rust: "Warm Mixed",
-    Burgundy: "Jewel Tone Mixed",
-    Plum: "Jewel Tone Mixed",
-    Mustard: "Warm Mixed",
-    Gold: "Jewel Tone Mixed",
-    Mixed: "Designer Mixed",
-  };
-
-  if (legacyHeroColors.includes(heroColor as LegacyHeroColor)) {
-    return legacyToFamily[heroColor as LegacyHeroColor];
-  }
-
-  return HERO_COLOR_DEFAULT;
-}
-
-function getWallColorRandomPoolByProfile(colorProfileSelection: string[]): string[] {
-  const selectedProfiles = new Set(colorProfileSelection);
-  const earthyOnlySelection =
-    colorProfileSelection.length === 1 &&
-    selectedProfiles.has("earthy saturated palette");
-
-  if (earthyOnlySelection) {
-    return wallColorPalettes;
-  }
-
-  const filtered = wallColorPalettes.filter(
-    (palette) =>
-      !palette.includes("earthy warm mix") &&
-      !palette.includes("green designer mix") &&
-      !palette.includes("wine accent mix") &&
-      !palette.includes("blush and rose mix") &&
-      !palette.includes("balanced modern mix") &&
-      !palette.includes("fresh light mix") &&
-      !palette.includes("jewel accent mix") &&
-      !palette.includes("high-contrast mix")
-  );
-
-  return filtered.length > 0 ? filtered : wallColorPalettes;
+  // "Mixed" is the one legacy value that is not a current option.
+  return heroColor === "Mixed" ? "Designer Mixed" : HERO_COLOR_DEFAULT;
 }
 
 function hashStringToSeed(value: string): number {
@@ -692,6 +611,11 @@ export async function POST(request: Request) {
 
     const randomizeWallColor = payload.randomizeWallColor === true;
     const randomRunSalt = randomizeWallColor ? `${Date.now()}-${Math.random()}` : "stable";
+    const wallColorRandomPool = getWallColorRandomPool({
+      colorProfileSelection,
+      colorStrategy: colorStrategySelection,
+      colorCoverage: colorCoverageSelection,
+    });
 
     const maxImages =
       typeof payload.maxImages === "number" && Number.isInteger(payload.maxImages)
@@ -748,7 +672,7 @@ export async function POST(request: Request) {
                         ceilingLight,
                         wallColorPalette: randomizeWallColor
                           ? pickRandomItem(
-                              getWallColorRandomPoolByProfile(colorProfileSelection),
+                              wallColorRandomPool,
                               seededRandom
                             )
                           : wallColorPaletteSelection,
@@ -771,7 +695,7 @@ export async function POST(request: Request) {
                       ceilingLight,
                       wallColorPalette: randomizeWallColor
                         ? pickRandomItem(
-                            getWallColorRandomPoolByProfile(colorProfileSelection),
+                            wallColorRandomPool,
                             seededRandom
                           )
                         : wallColorPaletteSelection,

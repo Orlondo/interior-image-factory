@@ -5,7 +5,8 @@ import type {
   HeroColor,
   RoomType,
 } from "@/lib/combinations";
-import { buildColorPaletteDirective } from "@/lib/promptBuilder/colorPalette";
+import { buildColorPaletteDirective, selectPalette } from "@/lib/promptBuilder/colorPalette";
+import { AUTO_WALL_COLOR_PALETTE } from "@/lib/wallColorPalette";
 
 const COLOR_MOOD_DIRECTION_MAP: Record<ColorMood, string> = {
   "Warm Neutral":
@@ -53,7 +54,30 @@ function getColorIntensityLevel(colorIntensity: number):
   return "Bold";
 }
 
-function getCoverageDirective(colorCoverage: ColorCoverage): string {
+type ColorTier = "muted" | "soft" | "full";
+
+function getColorTier(colorIntensity: number): ColorTier {
+  if (colorIntensity <= 20) {
+    return "muted";
+  }
+
+  if (colorIntensity <= 40) {
+    return "soft";
+  }
+
+  return "full";
+}
+
+function getCoverageDirective(colorCoverage: ColorCoverage, tier: ColorTier = "full"): string {
+  const base = getBaseCoverageDirective(colorCoverage);
+  const needsTint = colorCoverage === "Architectural Surfaces" || colorCoverage === "Whole Room";
+
+  return tier === "muted" && needsTint
+    ? `${base} Because intensity is low, render that color as a pale, desaturated tint, not saturated paint.`
+    : base;
+}
+
+function getBaseCoverageDirective(colorCoverage: ColorCoverage): string {
   switch (colorCoverage) {
     case "Decor Only":
       return "Color coverage Decor Only: keep architecture mostly neutral and confine palette use to art, pillows, throws, rugs, table accessories, vases, and small styling objects.";
@@ -70,15 +94,35 @@ function getWallTreatmentDirective(wallTypes: string[]): string {
   return wallTypes.length > 0 ? wallTypes.join(", ") : "wall surface material and texture cues";
 }
 
+function getViewDirectionDirective(view: string): string {
+  if (view === "regular inner-city neighborhood") {
+    return "Street-level inner-city residential neighborhood view: show neighboring houses, fences, porches, small yards, and visible backyards with trees and everyday residential details (no storefront rows and no elevated apartment-only outlook).";
+  }
+
+  if (view === "inner-city apartments (elevated view)") {
+    return "Elevated apartment outlook: urban residential blocks and mid/high-rise apartment facades viewed from an upper-floor perspective.";
+  }
+
+  return `${view}, framed naturally with realistic depth and context.`;
+}
+
 function getColorProfileExecutionRule(
   colorProfileTypes: string[],
-  useLegacyNeutralGuardrails: boolean
+  useLegacyNeutralGuardrails: boolean,
+  tier: ColorTier
 ): string {
+  const balancedPaletteRule =
+    tier === "muted"
+      ? "Keep the room calm, tonal, and mostly neutral, with the palette appearing as quiet tints and small touches."
+      : tier === "soft"
+        ? "Keep the palette cohesive and restrained, letting color support the room rather than lead it."
+        : "Keep the palette cohesive and color-led across surfaces, furnishings, and styling without reasserting neutral-wall defaults.";
+
   const colorProfileExecutionMap: Record<string, string> = {
     "current balanced palette (default)":
       useLegacyNeutralGuardrails
         ? "Keep a designer-curated neutral story centered on warm white, cream, taupe, greige, stone, and natural wood, with subtle accent restraint."
-        : "Keep the palette cohesive and color-led across surfaces, furnishings, and styling without reasserting neutral-wall defaults.",
+        : balancedPaletteRule,
     "rich color-forward palette":
       "Allow richer depth through layered materials and warm contrast, while keeping walls primarily neutral and professionally curated.",
     "high-contrast palette":
@@ -133,6 +177,7 @@ export function buildPrompt(
 
   const normalizedColorIntensity = clampColorIntensity(colorIntensity);
   const colorIntensityLevel = getColorIntensityLevel(normalizedColorIntensity);
+  const colorTier = getColorTier(normalizedColorIntensity);
   const useLegacyNeutralGuardrails = shouldUseLegacyNeutralGuardrails({
     colorStrategy,
     colorCoverage,
@@ -162,7 +207,8 @@ export function buildPrompt(
 
   const colorProfileExecutionRule = getColorProfileExecutionRule(
     normalizedColorProfileTypes,
-    useLegacyNeutralGuardrails
+    useLegacyNeutralGuardrails,
+    colorTier
   );
   const allowEarthyBias =
     normalizedColorProfileTypes.length === 1 &&
@@ -172,7 +218,11 @@ export function buildPrompt(
     ? "Earthy saturation is allowed because the earthy profile was explicitly selected."
     : useLegacyNeutralGuardrails
       ? "Keep dominant walls in warm-neutral families (warm white, ivory, cream, linen, taupe, greige, sand, warm charcoal). Avoid blue accent walls, highly saturated paint colors, and excessive cool-gray dominance."
-      : "Keep the palette aligned with the selected mood and coverage without defaulting back to neutral-wall framing or muted gray-beige behavior.";
+      : colorTier === "muted"
+        ? "Keep every palette color pale, desaturated, and tonal. Avoid saturated paint and bold color blocking; a calm, light room is correct at this intensity."
+        : colorTier === "soft"
+          ? "Keep palette color restrained and softened, aligned with the selected mood and coverage."
+          : "Keep the palette aligned with the selected mood and coverage without defaulting back to neutral-wall framing or muted gray-beige behavior.";
 
   const noGreenCastRule = useLegacyNeutralGuardrails
     ? "Apply warm-neutral white balance with no artificial color cast. Dark walls, when present, must read as warm charcoal or soft near-black rather than blue-heavy tones. Stone should read as light limestone, travertine, or warm marble with realistic mineral character. Millwork, plaster, and dominant artwork must stay neutral-forward unless a subtle accent is intentionally specified."
@@ -197,9 +247,12 @@ export function buildPrompt(
       furnitureToneRule =
         "Allow a bold but curated accent narrative across textiles, selected upholstery, decor, and art while preserving realistic materials and neutral-forward architecture.";
     }
+  } else if (normalizedColorIntensity <= 10) {
+    furnitureToneRule =
+      "Keep furniture, rugs, and upholstery in quiet, desaturated, low-contrast tones that only hint at the palette. No saturated or high-contrast color blocking on any large piece.";
   } else if (normalizedColorIntensity <= 20) {
     furnitureToneRule =
-      "Use the lightest color touches on furniture, but allow a colored chair, sofa, bench, or rug to carry the palette when coverage asks for architectural surfaces.";
+      "Keep major furniture and rugs soft and tonal, with the palette shown as pale, desaturated versions of its colors. Allow only small, low-contrast color touches on cushions, throws, and decor.";
   } else if (normalizedColorIntensity <= 40) {
     furnitureToneRule =
       "Allow color to appear clearly in furniture, rugs, and soft goods, with major pieces participating in the palette instead of defaulting to neutral-forward framing.";
@@ -228,9 +281,12 @@ export function buildPrompt(
     } else {
       accentIntensityRule = "Accent colors should be bold, intentional, and prominent across coordinated styling elements, while avoiding neon or chaotic color drift.";
     }
+  } else if (normalizedColorIntensity <= 10) {
+    accentIntensityRule =
+      "Accent colors should be barely there: tiny, desaturated, low-contrast touches. Intensity overrides coverage, so surfaces stay pale and tonal.";
   } else if (normalizedColorIntensity <= 20) {
     accentIntensityRule =
-      "Accent colors can be very light, but still allow a colored wall or built-in when coverage selects Architectural Surfaces.";
+      "Accent colors should be quiet and desaturated, limited to a few small decor and textile moments. Intensity overrides coverage, so any palette color on walls or built-ins must be a pale, low-saturation tint.";
   } else if (normalizedColorIntensity <= 40) {
     accentIntensityRule =
       "Accent colors should be present and visible across textiles, decor, furniture, and architectural details.";
@@ -246,7 +302,9 @@ export function buildPrompt(
   }
 
   const paletteCohesionRule =
-    "Keep palette family cohesion while allowing controlled variation and tonal exploration across walls, cabinetry, millwork, built-ins, rugs, furniture, and artwork.";
+    colorTier === "muted" && !useLegacyNeutralGuardrails
+      ? "Keep palette family cohesion through quiet tonal variation in texture and material, with color staying low in saturation and contrast."
+      : "Keep palette family cohesion while allowing controlled variation and tonal exploration across walls, cabinetry, millwork, built-ins, rugs, furniture, and artwork.";
 
   const focalPointDirection =
     focalPointTypes.length > 0
@@ -265,15 +323,62 @@ export function buildPrompt(
 
   const wallTreatmentDirection = getWallTreatmentDirective(wallTypes);
 
-  const wallColorPaletteInstruction = useLegacyNeutralGuardrails
-    ? "Strictly honor the selected wall color palette. Keep dominant walls neutral-forward and avoid abrupt hue shifts unless coverage explicitly calls for architectural color."
-    : "Strictly honor the selected wall color palette. Let strategy and coverage decide when walls, millwork, and built-ins become color carriers.";
+  const usesAutoWallPalette = wallColorPalette === AUTO_WALL_COLOR_PALETTE;
+  const selectedPalette = selectPalette({
+    colorMood,
+    colorStrategy,
+    heroColor,
+    imageIndex: autoPaletteVariation ? imageIndex : 0,
+    autoPaletteVariation,
+  });
+
+  const wallColorPaletteDirection = !usesAutoWallPalette
+    ? wallColorPalette
+    : useLegacyNeutralGuardrails
+      ? "warm-neutral walls (warm white, cream, taupe, greige, stone); bring the selected palette in through decor, textiles, and furniture"
+      : colorTier === "muted"
+        ? `follow the selected palette (${selectedPalette.name}) as pale, low-saturation tints; walls may stay light and tonal`
+        : `follow the selected palette (${selectedPalette.name}); walls and built-ins take palette color according to strategy and coverage`;
+
+  const wallColorPaletteInstruction = usesAutoWallPalette
+    ? useLegacyNeutralGuardrails
+      ? "Keep dominant walls neutral-forward and avoid abrupt hue shifts unless coverage explicitly calls for architectural color."
+      : colorTier === "muted"
+        ? "Let the selected palette set the hue of any wall color, but keep it a pale, low-saturation tint; light tonal walls are fine."
+        : "Let the selected palette, strategy, and coverage decide wall color; do not default to white, gray, or navy walls unless the palette calls for them."
+    : useLegacyNeutralGuardrails
+      ? "Strictly honor the selected wall color palette. Keep dominant walls neutral-forward and avoid abrupt hue shifts unless coverage explicitly calls for architectural color."
+      : "Strictly honor the selected wall color palette. Let strategy and coverage decide when walls, millwork, and built-ins become color carriers.";
+
+  const isMoodyLuxury = colorMood === "Moody Luxury";
+  const lightingDirectionLines = isMoodyLuxury
+    ? `- Soft overcast or late-afternoon daylight at the windows with a calm, enveloping interior feel
+- Rich, deeper midtones and gentle shadow falloff so dark finishes keep depth without crushing detail
+- Warm indirect cove lighting, backlit shelving, and layered practical fixtures create a glowing, intimate atmosphere
+- Balanced exposure with preserved highlight detail (no blown windows)
+- HDR photoreal rendering, physically accurate materials`
+    : `- Bright natural daylight with an airy, sunlit interior feel and clean ambient bounce
+- Lifted midtones and soft shadow detail so corners read clearly without looking flat
+- Warm indirect cove lighting and layered practical fixtures to create an elegant luminous glow
+- Realistic high-key exposure with preserved highlight detail (no blown windows)
+- HDR photoreal rendering, physically accurate materials`;
+  const cameraFinishLine = isMoodyLuxury
+    ? "premium real-estate editorial photography with balanced editorial lighting"
+    : "premium real-estate editorial photography with bright editorial lighting balance";
+  const darkWallRule = useLegacyNeutralGuardrails
+    ? "Dark walls must be warm charcoal or soft near-black, not blue-heavy, not gray-green, and not muddy"
+    : "Dark walls, when present, should read rich and true to the selected palette, never muddy or flat";
 
   const legacyNegativeCues = useLegacyNeutralGuardrails
     ? `- Avoid brightly saturated furniture upholstery or large furniture pieces in vivid green, vivid orange, or vivid red
 - Avoid dominant blue accent walls, bright wall colors, and artificial-looking palettes`
     : `- Keep furniture, rugs, and built-ins aligned with the selected palette and coverage
 - Avoid abrupt color shifts that break the palette story`;
+
+  const lowIntensityNegativeCue =
+    colorTier === "muted"
+      ? "- Avoid saturated paint, vivid upholstery, and bold color blocking; the room should read calm, tonal, and mostly neutral with the palette as a quiet undertone\n"
+      : "";
 
   const ceilingDirection =
     ceilingTypes.length > 0
@@ -284,6 +389,17 @@ export function buildPrompt(
     ceilingLightTypes.length > 0
       ? ceilingLightTypes.join(", ")
       : "concealed cove lighting";
+
+  const accentPhrase =
+    colorTier === "muted"
+      ? "quiet, restrained color touches"
+      : colorTier === "soft"
+        ? "restrained color accents"
+        : null;
+  const tuneAccentPhrase = (text: string): string =>
+    accentPhrase
+      ? text.replace(/(?:clearly )?visible color accents/, accentPhrase)
+      : text;
 
   const styleDirections: Record<string, string> = {
     modern:
@@ -322,9 +438,10 @@ export function buildPrompt(
       "Transitional uncanny ambiance, sparse composition, atmospheric lighting, quiet emptiness, clean geometric corridors and thresholds, subtly surreal but realistic architectural mood.",
   };
 
-  const styleDirection =
+  const styleDirection = tuneAccentPhrase(
     styleDirections[style] ??
-    "Strongly adhere to the selected style with distinct forms, materials, and styling choices.";
+      "Strongly adhere to the selected style with distinct forms, materials, and styling choices."
+  );
 
   const restrainedStyles = new Set([
     "minimalist",
@@ -334,7 +451,9 @@ export function buildPrompt(
   ]);
 
   const wallColorExecutionRule = !useLegacyNeutralGuardrails
-    ? "Let color coverage and strategy determine whether walls and built-ins carry palette color; do not reassert neutral defaults."
+    ? colorTier === "muted"
+      ? "Keep walls light and tonal. Coverage may place the palette on surfaces, but only as pale, desaturated tints."
+      : "Let color coverage and strategy determine whether walls and built-ins carry palette color; do not reassert neutral defaults."
     : restrainedStyles.has(style)
       ? "Keep the wall surface calm when the coverage setting is low, but let color coverage override wall neutrality when architectural surfaces are selected. Use layered whites, creams, taupes, wood, and stone rather than saturated wall paint unless coverage explicitly calls for stronger architectural color."
       : "Ensure tasteful palette variation through nuanced warm-neutral shifts, material contrast, and controlled accent detailing. Let color coverage determine whether walls stay neutral or carry palette color.";
@@ -423,12 +542,12 @@ Design Direction:
   - Styling accessories: bold art pieces, conceptual sculptures, unconventional objects that challenge the eye
   - Accessories should feel intentional, provocative, and culturally aware - pushing boundaries while maintaining cohesion
 - Room size direction: ${roomSize}; architecture, furniture scale, circulation space, and camera composition should match this size faithfully
-- Wall color palette direction: ${wallColorPalette}
+- Wall color palette direction: ${wallColorPaletteDirection}
 - Color mood direction: ${colorMood}; ${colorMoodDirection}
-- Color rule priority (critical): Room Type > Color Strategy > Color Coverage > Color Intensity > Palette Family > Color Mood > Interior Style > Home Quality > Wall Type
+- Color rule priority (critical): Room Type > Color Strategy > Color Intensity (strength of color) > Color Coverage (where color appears) > Palette Family > Color Mood > Interior Style > Home Quality > Wall Type
 - Strategy precedence rule (critical): when strategy conflicts with mood, strategy wins.
 - Color intensity direction: ${normalizedColorIntensity}/100 (${colorIntensityLevel})
-- Color coverage direction: ${colorCoverage}; ${getCoverageDirective(colorCoverage)}
+- Color coverage direction: ${colorCoverage}; ${getCoverageDirective(colorCoverage, colorTier)}
 - Enhanced color system directive (critical): ${colorPaletteDirective}
 - Color profile direction: ${colorProfileDirection}
 - Wall treatment / material direction: ${wallTreatmentDirection}, described as texture/material intent rather than a mandatory wall color restriction
@@ -451,27 +570,24 @@ Design Direction:
 - Perfect spatial balance, clean lines, no clutter
 
 Lighting:
-- Bright natural daylight with an airy, sunlit interior feel and clean ambient bounce
-- Lifted midtones and soft shadow detail so corners read clearly without looking flat
-- Warm indirect cove lighting and layered practical fixtures to create an elegant luminous glow
-- Realistic high-key exposure with preserved highlight detail (no blown windows)
-- HDR photoreal rendering, physically accurate materials
+${lightingDirectionLines}
 
 Camera:
 - Wide interior composition, straight verticals, professional framing
 - Composition target: ${qualityCameraDirection[homeQuality]}
-- 8k detail, tack-sharp focus, premium real-estate editorial photography with bright editorial lighting balance
+- 8k detail, tack-sharp focus, ${cameraFinishLine}
 
 View:
-- ${view}, framed according to the selected window style
+- ${getViewDirectionDirective(view)}
+- Maintain framing according to the selected window style
 
 Negative cues:
 - No cartoon look, no CGI plastic surfaces, no neon-like oversaturation, no distortion, no clutter
 - ${legacyNegativeCues}
 ${useLegacyNeutralGuardrails ? "- No green hue cast, green tint, teal cast, blue-green cast, or gray-green cast on walls, stone, plaster, millwork, or dominant artwork unless explicitly selected" : "- Avoid unintentional color casts; walls, stone, plaster, and millwork must remain true to the selected palette"}
-- Dark walls must be warm charcoal or soft near-black, not blue-heavy, not gray-green, and not muddy
+- ${darkWallRule}
 - Keep accent colors cohesive to the selected palette and color intensity target; avoid neon-like or chaotic oversaturation
-- Avoid off-palette statement artwork; artwork tones must remain inside the selected palette
+${lowIntensityNegativeCue}- Avoid off-palette statement artwork; artwork tones must remain inside the selected palette
 - ${qualityNegativeDirection[homeQuality]}
 `;
 }

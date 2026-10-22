@@ -49,6 +49,7 @@ export const rooms: RoomType[] = [
 
 export const views = [
   "regular inner-city neighborhood",
+  "inner-city apartments (elevated view)",
   "suburban neighborhood street",
   "park courtyard",
   "forest",
@@ -183,16 +184,7 @@ export const colorCoverages = [
 
 export type ColorCoverage = (typeof colorCoverages)[number];
 
-export const heroColors = [
-  "Auto",
-  "Designer Mixed",
-  "Earthy Mixed",
-  "Jewel Tone Mixed",
-  "Warm Mixed",
-  "Cool Mixed",
-] as const;
-
-export const legacyHeroColors = [
+export const singleHeroColors = [
   "Deep Blue",
   "Teal",
   "Emerald",
@@ -204,11 +196,20 @@ export const legacyHeroColors = [
   "Plum",
   "Mustard",
   "Gold",
-  "Mixed",
+] as const;
+
+export const heroColors = [
+  "Auto",
+  "Designer Mixed",
+  "Earthy Mixed",
+  "Jewel Tone Mixed",
+  "Warm Mixed",
+  "Cool Mixed",
+  ...singleHeroColors,
 ] as const;
 
 export type HeroColor = (typeof heroColors)[number];
-export type LegacyHeroColor = (typeof legacyHeroColors)[number];
+export type SingleHeroColor = (typeof singleHeroColors)[number];
 
 export const COLOR_STRATEGY_DEFAULT: ColorStrategy = "Designer Layered";
 export const COLOR_COVERAGE_DEFAULT: ColorCoverage = "Architectural Surfaces";

@@ -112,6 +112,12 @@ For each generated image, vary the color palette using options such as:
 
 ### Color Direction
 
+> **Scope note (2026-10-22):** The neutral-first direction below is the default look for
+> requests where Color Strategy is **Neutral Base** or Color Coverage is **Decor Only**.
+> For every other strategy, Color Strategy, Palette Family or Hero Color, Color Coverage,
+> and Color Intensity (see `color-system-enhancements`) decide the wall, furniture, and
+> accent colors. The Avoid list below does not apply to those requests.
+
 Generated interiors should favor professionally designed neutral color palettes.
 
 Preferred color palettes:
@@ -429,4 +435,4 @@ Moody Luxury + 75
 - A batch of images should not all share the same dominant color palette.
 - Color choices should feel intentional and professionally designed.
 - Color palettes are appropriate to the selected design style.
-- A generated batch should primarily contain warm neutrals, natural wood tones, stone textures, and designer-inspired palettes rather than blue or highly saturated walls.
+- For Neutral Base or Decor Only requests, a generated batch should primarily contain warm neutrals, natural wood tones, stone textures, and designer-inspired palettes rather than blue or highly saturated walls. Other requests follow the selected palette, strategy, and coverage.

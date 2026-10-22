@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:color-system": "tsx --test tests/color-system.test.ts"
+    "test:color-system": "tsx --test tests/color-system.test.ts",
+    "test:streamline": "tsx --test tests/streamline.test.ts"
   },
   "dependencies": {
     "next": "^16.2.6",

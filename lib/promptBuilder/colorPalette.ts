@@ -1,3 +1,4 @@
+import { singleHeroColors } from "@/lib/combinations";
 import type {
   ColorCoverage,
   ColorMood,
@@ -13,6 +14,7 @@ export type PaletteVariant = {
   neutralBase: string;
   metalAccent: string;
   woodTone: string;
+  complementaryAccents?: readonly string[];
 };
 
 export type SelectedPalette = PaletteVariant & {
@@ -49,18 +51,8 @@ type PaletteStory = {
 const MAJOR_SURFACES =
   "walls, cabinetry, built-ins, fireplace surrounds, millwork, shelving, and ceiling details";
 
+// "Mixed" is the one legacy hero color value that is not a current option.
 const LEGACY_TO_FAMILY_MAP: Record<string, HeroColor> = {
-  "Deep Blue": "Cool Mixed",
-  Teal: "Cool Mixed",
-  Emerald: "Jewel Tone Mixed",
-  Olive: "Earthy Mixed",
-  Sage: "Earthy Mixed",
-  Terracotta: "Warm Mixed",
-  Rust: "Warm Mixed",
-  Burgundy: "Jewel Tone Mixed",
-  Plum: "Jewel Tone Mixed",
-  Mustard: "Warm Mixed",
-  Gold: "Jewel Tone Mixed",
   Mixed: "Designer Mixed",
 };
 
@@ -392,6 +384,334 @@ const FAMILY_PALETTES: Record<HeroColor, readonly PaletteVariant[]> = {
       woodTone: "dark oak",
     },
   ],
+  "Deep Blue": [
+    {
+      name: "Deep Blue, Ivory, Walnut",
+      primary: "deep navy blue",
+      secondary: "ink blue",
+      tertiary: "warm gray",
+      neutralBase: "ivory and limestone",
+      metalAccent: "brushed brass",
+      woodTone: "walnut",
+    },
+    {
+      name: "Navy, Cream, Oak",
+      primary: "navy",
+      secondary: "slate blue",
+      tertiary: "camel",
+      neutralBase: "cream and travertine",
+      metalAccent: "aged brass",
+      woodTone: "white oak",
+    },
+    {
+      name: "Midnight Blue, Stone, Smoked Oak",
+      primary: "midnight blue",
+      secondary: "dusty blue",
+      tertiary: "charcoal",
+      neutralBase: "warm white and stone",
+      metalAccent: "aged bronze",
+      woodTone: "smoked oak",
+    },
+  ],
+  Teal: [
+    {
+      name: "Teal, Sand, Walnut",
+      primary: "teal",
+      secondary: "deep petrol",
+      tertiary: "warm sand",
+      neutralBase: "ivory and limestone",
+      metalAccent: "brushed brass",
+      woodTone: "walnut",
+    },
+    {
+      name: "Peacock Teal, Cream, Oak",
+      primary: "peacock teal",
+      secondary: "ink blue",
+      tertiary: "ochre",
+      neutralBase: "cream and travertine",
+      metalAccent: "aged brass",
+      woodTone: "white oak",
+    },
+    {
+      name: "Dark Teal, Charcoal, Gold",
+      primary: "deep teal",
+      secondary: "forest green",
+      tertiary: "charcoal",
+      neutralBase: "warm white and stone",
+      metalAccent: "muted gold",
+      woodTone: "dark walnut",
+    },
+  ],
+  Emerald: [
+    {
+      name: "Emerald, Ivory, Walnut",
+      primary: "emerald green",
+      secondary: "forest green",
+      tertiary: "warm stone",
+      neutralBase: "ivory and limestone",
+      metalAccent: "brushed brass",
+      woodTone: "walnut",
+      complementaryAccents: ["blush", "cream", "rust", "walnut", "brass"],
+    },
+    {
+      name: "Emerald, Blush, Oak",
+      primary: "emerald",
+      secondary: "deep jade",
+      tertiary: "muted blush",
+      neutralBase: "cream and travertine",
+      metalAccent: "soft gold",
+      woodTone: "white oak",
+      complementaryAccents: ["blush", "cream", "rust", "walnut", "brass"],
+    },
+    {
+      name: "Jewel Emerald, Charcoal, Bronze",
+      primary: "jewel emerald",
+      secondary: "dark green",
+      tertiary: "charcoal",
+      neutralBase: "warm white and plaster",
+      metalAccent: "aged bronze",
+      woodTone: "dark walnut",
+      complementaryAccents: ["blush", "cream", "rust", "walnut", "brass"],
+    },
+  ],
+  Olive: [
+    {
+      name: "Olive, Sand, Walnut",
+      primary: "olive green",
+      secondary: "moss",
+      tertiary: "warm sand",
+      neutralBase: "ivory and limestone",
+      metalAccent: "brushed brass",
+      woodTone: "walnut",
+    },
+    {
+      name: "Olive, Cream, Oak",
+      primary: "olive",
+      secondary: "sage",
+      tertiary: "clay",
+      neutralBase: "cream and travertine",
+      metalAccent: "aged bronze",
+      woodTone: "white oak",
+    },
+    {
+      name: "Deep Olive, Charcoal, Gold",
+      primary: "deep olive",
+      secondary: "forest green",
+      tertiary: "warm charcoal",
+      neutralBase: "oat and putty",
+      metalAccent: "muted gold",
+      woodTone: "dark oak",
+    },
+  ],
+  Sage: [
+    {
+      name: "Sage, Ivory, Oak",
+      primary: "sage green",
+      secondary: "eucalyptus",
+      tertiary: "warm white",
+      neutralBase: "ivory and limestone",
+      metalAccent: "brushed brass",
+      woodTone: "white oak",
+    },
+    {
+      name: "Sage, Clay, Walnut",
+      primary: "sage",
+      secondary: "soft olive",
+      tertiary: "clay rose",
+      neutralBase: "cream and travertine",
+      metalAccent: "aged brass",
+      woodTone: "walnut",
+    },
+    {
+      name: "Gray Sage, Stone, Smoked Oak",
+      primary: "gray-green sage",
+      secondary: "deep sage",
+      tertiary: "warm taupe",
+      neutralBase: "warm white and stone",
+      metalAccent: "soft bronze",
+      woodTone: "smoked oak",
+    },
+  ],
+  Terracotta: [
+    {
+      name: "Terracotta, Cream, Walnut",
+      primary: "terracotta",
+      secondary: "clay",
+      tertiary: "soft rust",
+      neutralBase: "cream and travertine",
+      metalAccent: "aged brass",
+      woodTone: "walnut",
+    },
+    {
+      name: "Burnt Terracotta, Sand, Oak",
+      primary: "burnt terracotta",
+      secondary: "warm sienna",
+      tertiary: "sand",
+      neutralBase: "ivory and limestone",
+      metalAccent: "aged bronze",
+      woodTone: "white oak",
+    },
+    {
+      name: "Deep Terracotta, Charcoal, Brass",
+      primary: "deep terracotta",
+      secondary: "rust",
+      tertiary: "warm charcoal",
+      neutralBase: "cream and plaster",
+      metalAccent: "brushed brass",
+      woodTone: "dark walnut",
+    },
+  ],
+  Rust: [
+    {
+      name: "Rust, Cream, Walnut",
+      primary: "rust",
+      secondary: "burnt orange",
+      tertiary: "warm tan",
+      neutralBase: "cream and travertine",
+      metalAccent: "aged brass",
+      woodTone: "walnut",
+    },
+    {
+      name: "Rust, Olive, Oak",
+      primary: "rust",
+      secondary: "olive",
+      tertiary: "camel",
+      neutralBase: "ivory and limestone",
+      metalAccent: "aged bronze",
+      woodTone: "white oak",
+    },
+    {
+      name: "Deep Rust, Charcoal, Gold",
+      primary: "deep rust",
+      secondary: "copper",
+      tertiary: "warm charcoal",
+      neutralBase: "oat and putty",
+      metalAccent: "muted gold",
+      woodTone: "dark oak",
+    },
+  ],
+  Burgundy: [
+    {
+      name: "Burgundy, Cream, Walnut",
+      primary: "burgundy",
+      secondary: "merlot",
+      tertiary: "warm blush",
+      neutralBase: "cream and travertine",
+      metalAccent: "brushed brass",
+      woodTone: "walnut",
+    },
+    {
+      name: "Wine, Olive, Oak",
+      primary: "wine red",
+      secondary: "dusty mauve",
+      tertiary: "olive",
+      neutralBase: "ivory and limestone",
+      metalAccent: "aged brass",
+      woodTone: "white oak",
+    },
+    {
+      name: "Deep Burgundy, Charcoal, Gold",
+      primary: "deep burgundy",
+      secondary: "oxblood",
+      tertiary: "warm charcoal",
+      neutralBase: "oat and putty",
+      metalAccent: "muted gold",
+      woodTone: "dark walnut",
+    },
+  ],
+  Plum: [
+    {
+      name: "Plum, Taupe, Walnut",
+      primary: "dusty plum",
+      secondary: "aubergine",
+      tertiary: "warm taupe",
+      neutralBase: "oat and putty",
+      metalAccent: "muted gold",
+      woodTone: "walnut",
+    },
+    {
+      name: "Plum, Olive, Oak",
+      primary: "plum",
+      secondary: "mauve",
+      tertiary: "olive",
+      neutralBase: "cream and limestone",
+      metalAccent: "aged brass",
+      woodTone: "white oak",
+    },
+    {
+      name: "Deep Aubergine, Stone, Smoked Oak",
+      primary: "deep aubergine",
+      secondary: "plum",
+      tertiary: "charcoal",
+      neutralBase: "warm white and stone",
+      metalAccent: "soft bronze",
+      woodTone: "smoked oak",
+    },
+  ],
+  Mustard: [
+    {
+      name: "Mustard, Cream, Walnut",
+      primary: "mustard yellow",
+      secondary: "ochre",
+      tertiary: "warm brown",
+      neutralBase: "cream and travertine",
+      metalAccent: "aged brass",
+      woodTone: "walnut",
+      complementaryAccents: ["deep navy", "olive", "cream", "walnut", "charcoal"],
+    },
+    {
+      name: "Mustard, Navy, Oak",
+      primary: "mustard",
+      secondary: "deep navy",
+      tertiary: "camel",
+      neutralBase: "ivory and limestone",
+      metalAccent: "brushed brass",
+      woodTone: "white oak",
+      complementaryAccents: ["deep navy", "olive", "cream", "walnut", "charcoal"],
+    },
+    {
+      name: "Golden Mustard, Olive, Smoked Oak",
+      primary: "golden mustard",
+      secondary: "olive",
+      tertiary: "warm charcoal",
+      neutralBase: "oat and putty",
+      metalAccent: "aged bronze",
+      woodTone: "smoked oak",
+      complementaryAccents: ["deep navy", "olive", "cream", "walnut", "charcoal"],
+    },
+  ],
+  Gold: [
+    {
+      name: "Gold, Ivory, Walnut",
+      primary: "antique gold",
+      secondary: "warm champagne",
+      tertiary: "soft taupe",
+      neutralBase: "ivory and limestone",
+      metalAccent: "polished brass",
+      woodTone: "walnut",
+      complementaryAccents: ["deep navy", "burgundy", "cream", "charcoal", "walnut"],
+    },
+    {
+      name: "Gold, Charcoal, Oak",
+      primary: "gold",
+      secondary: "amber",
+      tertiary: "charcoal",
+      neutralBase: "cream and travertine",
+      metalAccent: "brushed brass",
+      woodTone: "white oak",
+      complementaryAccents: ["deep navy", "burgundy", "cream", "charcoal", "walnut"],
+    },
+    {
+      name: "Deep Gold, Navy, Dark Walnut",
+      primary: "deep gold",
+      secondary: "bronze",
+      tertiary: "deep navy",
+      neutralBase: "warm white and stone",
+      metalAccent: "aged gold",
+      woodTone: "dark walnut",
+      complementaryAccents: ["deep navy", "burgundy", "cream", "charcoal", "walnut"],
+    },
+  ],
 };
 
 function clampColorIntensity(colorIntensity: number): number {
@@ -451,6 +771,7 @@ function buildPaletteStory(
 
   const hueKey = getHueKey(primary) ?? getHueKey(secondary);
   const complementaryCandidates =
+    palette.complementaryAccents ||
     (hueKey && COMPLEMENTARY_COLOR_MAP[hueKey]) ||
     ["soft charcoal", "terracotta", "muted ochre", "aged brass", "warm ivory"];
 
@@ -542,8 +863,12 @@ export function selectPalette(input: {
 export function getIntensityDirective(colorIntensity: number): string {
   const intensity = clampColorIntensity(colorIntensity);
 
+  if (intensity <= 10) {
+    return `Color intensity ${intensity}/100: very muted. Every palette role (primary, secondary, complementary accent, neutral grounding, wood, and metal) is present only as a quiet, desaturated, low-contrast tone. Intensity sets the strength of color and overrides coverage: no saturated color on any surface or large piece.`;
+  }
+
   if (intensity <= 20) {
-    return `Color intensity ${intensity}/100: minimal color distribution with restrained accents. Keep all palette roles (primary, secondary, complementary accent, neutral grounding, wood, and metal) present in subtle ways.`;
+    return `Color intensity ${intensity}/100: muted and restrained. Keep all palette roles present, but as soft, desaturated tones. Intensity sets the strength of color and overrides coverage: surfaces carry only pale tints of the palette, and stronger color is limited to small accents.`;
   }
 
   if (intensity <= 50) {
@@ -621,11 +946,16 @@ function getArchitecturalSurfaceDirective(
     return `${base} Distribute color through decor, textiles, and furniture with only subtle architectural support.`;
   }
 
+  const lowIntensitySuffix =
+    intensity <= 20
+      ? " Because intensity is low, render that surface color as a pale, desaturated, tonal tint rather than a saturated paint color."
+      : "";
+
   if (colorCoverage === "Architectural Surfaces") {
-    return `${base} Require at least one major surface in palette color, beyond decor-only behavior.`;
+    return `${base} Require at least one major surface in palette color, beyond decor-only behavior.${lowIntensitySuffix}`;
   }
 
-  return `${base} Require multiple major surfaces in palette color so the room reads as a full-room composition.`;
+  return `${base} Require multiple major surfaces in palette color so the room reads as a full-room composition.${lowIntensitySuffix}`;
 }
 
 function getPaletteCohesionDirective(
@@ -646,6 +976,10 @@ export function getHeroColorDirective(heroColor: HeroColor, palette: SelectedPal
 
   if (family === "Auto") {
     return `Palette family Auto: use the mood-curated family ${palette.family} with balanced color leadership.`;
+  }
+
+  if ((singleHeroColors as readonly string[]).includes(family)) {
+    return `Hero color ${family}: make ${palette.primary} the clear lead color and repeat it deliberately through artwork, textiles, furniture accents, decor, and architectural details so it reads as an intentional designer choice, supported by ${palette.secondary} and ${palette.neutralBase}.`;
   }
 
   return `Palette family ${family}: influence this variation with layered primary, secondary, complementary accent, and contrast tones without forcing a single-color room.`;
@@ -742,7 +1076,12 @@ export function buildColorPaletteDirective(input: {
   );
   const intensityDirective = getIntensityDirective(input.colorIntensity);
   const heroDirective = getHeroColorDirective(input.heroColor, palette);
-  const coverageDirective = getCoverageDirective(input.colorCoverage);
+  const coverageNeedsTint =
+    input.colorCoverage === "Architectural Surfaces" || input.colorCoverage === "Whole Room";
+  const coverageDirective =
+    clampColorIntensity(input.colorIntensity) <= 20 && coverageNeedsTint
+      ? `${getCoverageDirective(input.colorCoverage)} At this low intensity those surfaces carry only pale, desaturated tints of the palette.`
+      : getCoverageDirective(input.colorCoverage);
   const architecturalSurfaceDirective = getArchitecturalSurfaceDirective(
     input.colorStrategy,
     input.colorCoverage,
