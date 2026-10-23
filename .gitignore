@@ -21,6 +21,13 @@
 /build
 /output/
 
+# generated image artifacts
+output/generated-*.png
+output/responses.json
+output/batches/
+*.jsonl
+*.ndjson
+
 # misc
 .DS_Store
 *.pem
