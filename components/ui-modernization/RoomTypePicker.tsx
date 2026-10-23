@@ -226,7 +226,7 @@ export function RoomTypePicker({
                 key={room}
                 type="button"
                 onClick={() => handleRemoveRoom(room)}
-                className="flex items-center gap-2 rounded-full border border-[#3A4252] bg-[#171A21] px-3 py-2 text-sm font-medium text-[#F5F7FA] transition hover:border-[#4F8CFF]/60 hover:bg-[#1D2230] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F8CFF]"
+                className="flex items-center gap-2 rounded-full border border-[#4F8CFF] bg-[#4F8CFF]/15 px-3 py-2 text-sm font-medium text-[#F5F7FA] transition hover:bg-[#4F8CFF]/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F8CFF]"
                 aria-label={`Remove ${room}`}
               >
                 <span

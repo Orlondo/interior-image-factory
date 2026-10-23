@@ -40,12 +40,36 @@ Success:
 Error:
 #EF4444
 
+## Surface Layers and Buttons
+
+Three surface levels keep controls visible against the card behind them:
+
+- Card: #171A21 (section cards, nested panels)
+- Raised control: #262B36 with a #3A4252 border (secondary buttons, unselected chips,
+  intensity steps)
+- Inset field: #0F1115 with a #3A4252 border (selects, text inputs)
+
+A control must never use the same fill as the surface it sits on. Hover raises the fill to
+#2D3342 and brightens the border to the accent. Disabled controls use 40% opacity.
+
+## Section Tints
+
+Each section card has a muted icon badge and a 3px left edge in its own tint, so a long page
+is easy to scan. Tints are quiet and carry no meaning on their own; the title does.
+
+- Saved setups: #8B9BB8
+- Room: #C9A66B
+- Look: #A08CD6
+- Details: #5FB3A8
+- Output: #8DB078
+- Generate: #4F8CFF (the accent, as the primary action)
+
 ## Accent Usage
 
 Accent color should only appear on:
 
 - Selected cards
-- Selected chips
+- Selected chips (accent border and a faint accent fill)
 - Generate button
 - Focus states
 - Active tabs

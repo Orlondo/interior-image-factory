@@ -25,8 +25,8 @@ export function ChipGroup({
       {options.map((option) => {
         const selected = selectedValues.includes(option.value);
         const chipClass = selected
-          ? "border-[#3A4252] bg-[#171A21] text-[#F5F7FA] hover:border-[#4F8CFF]/60"
-          : "border-[#262B36] bg-[#171A21] text-[#F5F7FA] hover:bg-[#1D2230] hover:border-[#4F8CFF]/50";
+          ? "border-[#4F8CFF] bg-[#4F8CFF]/15 text-[#F5F7FA] hover:bg-[#4F8CFF]/25"
+          : "border-[#3A4252] bg-[#262B36] text-[#F5F7FA] hover:border-[#4F8CFF]/60 hover:bg-[#2D3342]";
 
         return (
           <button

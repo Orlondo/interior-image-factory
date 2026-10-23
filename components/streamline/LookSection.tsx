@@ -12,7 +12,8 @@ import {
 import { validateName, type SavedLook } from "@/lib/savedItems";
 import type { Setup } from "@/lib/setup";
 import { CustomizeColors } from "./CustomizeColors";
-import { SECONDARY_BUTTON_CLASS, SECTION_CLASS, SELECT_CLASS } from "./fields";
+import { SECONDARY_BUTTON_CLASS, SELECT_CLASS } from "./fields";
+import { SectionCard } from "./SectionCard";
 
 const CUSTOM_VALUE = "__custom__";
 
@@ -23,6 +24,8 @@ type LookSectionProps = {
   /** Returns an error message, or null when saved. */
   onSaveLook: (name: string) => string | null;
   onDeleteLook: (id: string) => void;
+  isOpen: boolean;
+  onToggle: () => void;
   isCustomizeOpen: boolean;
   onToggleCustomize: () => void;
 };
@@ -33,6 +36,8 @@ export function LookSection({
   savedLooks,
   onSaveLook,
   onDeleteLook,
+  isOpen,
+  onToggle,
   isCustomizeOpen,
   onToggleCustomize,
 }: LookSectionProps) {
@@ -104,12 +109,19 @@ export function LookSection({
   const savedId = isSavedActive ? activeLook?.id.slice("saved:".length) : undefined;
 
   return (
-    <section className={SECTION_CLASS} aria-labelledby="look-heading">
-      <h2 id="look-heading" className="text-sm font-semibold">
-        Look
-      </h2>
-
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+    <SectionCard
+      id="look"
+      title="Look"
+      icon="look"
+      isOpen={isOpen}
+      onToggle={onToggle}
+      summary={
+        activeLook
+          ? `${activeLook.name} · ${getIntensityStep(setup.colorIntensity).label}`
+          : `Custom · ${setup.colorStrategy} · ${getIntensityStep(setup.colorIntensity).label}`
+      }
+    >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <label className="flex min-w-0 flex-col gap-2">
           <span className="text-sm font-medium text-[#98A2B3]">Look</span>
           <select
@@ -213,6 +225,6 @@ export function LookSection({
           {message}
         </p>
       ) : null}
-    </section>
+    </SectionCard>
   );
 }

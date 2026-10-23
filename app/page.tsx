@@ -7,6 +7,7 @@ import { ImageReview } from "@/components/streamline/ImageReview";
 import { LookSection } from "@/components/streamline/LookSection";
 import { OutputSection } from "@/components/streamline/OutputSection";
 import { RoomSection } from "@/components/streamline/RoomSection";
+import { SECONDARY_BUTTON_CLASS } from "@/components/streamline/fields";
 import { SetupsBar } from "@/components/streamline/SetupsBar";
 import { getLookValues } from "@/lib/looks";
 import {
@@ -21,12 +22,13 @@ import {
 } from "@/lib/savedItems";
 import { DEFAULT_SETUP, type Setup } from "@/lib/setup";
 import { useGeneration } from "@/lib/useGeneration";
+import { useSectionState } from "@/lib/useSectionState";
 import { useSavedItems } from "@/lib/useSavedItems";
 
 export default function Home() {
   const [setup, setSetup] = useState<Setup>(DEFAULT_SETUP);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
+  const sections = useSectionState();
   const generation = useGeneration();
   const savedLooks = useSavedItems<SavedLook>(SAVED_LOOKS_KEY, parseSavedLooks);
   const savedSetups = useSavedItems<SavedSetup>(SAVED_SETUPS_KEY, parseSavedSetups);
@@ -72,7 +74,29 @@ export default function Home() {
           onReset={() => setSetup(DEFAULT_SETUP)}
         />
 
-        <RoomSection setup={setup} update={update} />
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            className={SECONDARY_BUTTON_CLASS}
+            onClick={() => sections.setAll(true)}
+          >
+            Expand all
+          </button>
+          <button
+            type="button"
+            className={SECONDARY_BUTTON_CLASS}
+            onClick={() => sections.setAll(false)}
+          >
+            Collapse all
+          </button>
+        </div>
+
+        <RoomSection
+          setup={setup}
+          update={update}
+          isOpen={sections.state.room}
+          onToggle={() => sections.toggle("room")}
+        />
 
         <LookSection
           setup={setup}
@@ -80,6 +104,8 @@ export default function Home() {
           savedLooks={savedLooks.items}
           onSaveLook={saveLook}
           onDeleteLook={(id) => savedLooks.save(savedLooks.items.filter((item) => item.id !== id))}
+          isOpen={sections.state.look}
+          onToggle={() => sections.toggle("look")}
           isCustomizeOpen={isCustomizeOpen}
           onToggleCustomize={() => setIsCustomizeOpen((previous) => !previous)}
         />
@@ -87,11 +113,16 @@ export default function Home() {
         <DetailsSection
           setup={setup}
           update={update}
-          isOpen={isDetailsOpen}
-          onToggle={() => setIsDetailsOpen((previous) => !previous)}
+          isOpen={sections.state.details}
+          onToggle={() => sections.toggle("details")}
         />
 
-        <OutputSection setup={setup} update={update} />
+        <OutputSection
+          setup={setup}
+          update={update}
+          isOpen={sections.state.output}
+          onToggle={() => sections.toggle("output")}
+        />
 
         <GenerationPanel
           setup={setup}

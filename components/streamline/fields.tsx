@@ -3,13 +3,11 @@
 import type { ReactNode } from "react";
 
 export const SELECT_CLASS =
-  "h-[42px] w-full rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]";
+  "h-[42px] w-full rounded-[10px] border border-[#3A4252] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]";
 
-export const SECTION_CLASS =
-  "rounded-[20px] border border-[#262B36] bg-[#171A21] px-4 py-4 sm:px-5 sm:py-5";
-
+/** Raised fill and a clear border so buttons stand out from the card behind them. */
 export const SECONDARY_BUTTON_CLASS =
-  "min-h-[42px] rounded-[10px] border border-[#262B36] bg-[#171A21] px-3 py-2 text-sm font-medium text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF] disabled:opacity-50";
+  "min-h-[42px] rounded-[10px] border border-[#3A4252] bg-[#262B36] px-3 py-2 text-sm font-medium text-[#F5F7FA] transition hover:border-[#4F8CFF] hover:bg-[#2D3342] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4F8CFF] disabled:cursor-not-allowed disabled:opacity-40";
 
 type SelectFieldProps = {
   label: string;
@@ -46,7 +44,7 @@ type CheckboxFieldProps = {
 
 export function CheckboxField({ label, checked, onChange }: CheckboxFieldProps) {
   return (
-    <label className="inline-flex min-h-[42px] w-full items-center gap-2 rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA]">
+    <label className="inline-flex min-h-[42px] w-full items-center gap-2 rounded-[10px] border border-[#3A4252] bg-[#1D2230] px-3 py-2 text-sm text-[#F5F7FA]">
       <input
         type="checkbox"
         className="h-4 w-4 accent-[#4F8CFF]"

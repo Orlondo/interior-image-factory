@@ -237,5 +237,26 @@ All Looks keep Auto palette variation on.
   button that appears when a saved Look is active.
 - **Batch summary rule (verified in `route.ts`)**: the server always generates exactly Max
   images. More combinations than Max gives a random sample; fewer cycles through them again.
-- **Not done**: the server still builds every combination before sampling, so selecting many
-  options in every group can use a lot of memory. Follow-up: sample without building them all.
+- **Server guard (done)**: above 5,000 combinations the server samples `maxImages` combinations
+  directly instead of listing them all (`lib/scenarioSampling.ts`). A test request with 8.3
+  million combinations returns in milliseconds; the old code ran out of memory. Selections of
+  5,000 or fewer take the original path, so their results are unchanged.
+
+## Addendum: Section Look and Behavior (Build A)
+
+Decisions made after the first build, written down so the record stays in one place.
+
+- **FR-014**: Every section card MUST show an inline SVG icon in a muted tinted badge and a
+  matching 3px left edge. Tints are defined in `ui-modernization/design-system.md`. No icon
+  library is added.
+- **FR-015**: Room, Look, Details and Output MUST be collapsible. Room, Look and Output start
+  open and Details starts closed, so defaults can still be generated without opening anything.
+- **FR-016**: A collapsed section MUST show a one-line summary of its current choices.
+- **FR-017**: Generate and Saved setups are not collapsible. Generate is always open.
+- **FR-018**: Expand all and Collapse all buttons MUST affect the four main sections only.
+- **FR-019**: Open or closed state is remembered in the browser. If storage is blocked, it still
+  works for the current page view and is forgotten on reload.
+- **FR-020**: Inner collapsing (Customize colors, Details groups, Prompt Preview) is unchanged.
+- **FR-021**: Buttons, chips and intensity steps MUST use a raised fill and a clear border so
+  they stand out from their card (minimum 1.15:1 luminance ratio against the card).
+- Out of scope: a sticky section navigator, and larger section headings with descriptions.

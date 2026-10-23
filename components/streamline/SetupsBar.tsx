@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { validateName, type SavedSetup } from "@/lib/savedItems";
-import { SECONDARY_BUTTON_CLASS, SECTION_CLASS, SELECT_CLASS } from "./fields";
+import { SECONDARY_BUTTON_CLASS, SELECT_CLASS } from "./fields";
+import { SectionCard } from "./SectionCard";
 
 type SetupsBarProps = {
   savedSetups: SavedSetup[];
@@ -33,11 +34,8 @@ export function SetupsBar({ savedSetups, onSave, onApply, onDelete, onReset }: S
   }
 
   return (
-    <section className={SECTION_CLASS} aria-labelledby="setups-heading">
-      <h2 id="setups-heading" className="text-sm font-semibold">
-        Saved setups
-      </h2>
-      <p className="mt-1 text-xs text-[#98A2B3]">
+    <SectionCard id="setups" title="Saved setups" icon="setups">
+      <p className="text-xs text-[#98A2B3]">
         A setup remembers every selection on this page, saved in this browser.
       </p>
 
@@ -107,6 +105,6 @@ export function SetupsBar({ savedSetups, onSave, onApply, onDelete, onReset }: S
           {message}
         </p>
       ) : null}
-    </section>
+    </SectionCard>
   );
 }

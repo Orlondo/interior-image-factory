@@ -1,6 +1,5 @@
 "use client";
 
-import { CollapsibleSection } from "@/components/ui-modernization";
 import {
   ceilingLights,
   ceilings,
@@ -11,6 +10,7 @@ import {
 } from "@/lib/combinations";
 import type { Setup } from "@/lib/setup";
 import { OptionGroup } from "./OptionGroup";
+import { SectionCard } from "./SectionCard";
 
 type GroupKey = "walls" | "windowStyles" | "ceilings" | "ceilingLights" | "focalPoints" | "views";
 
@@ -39,27 +39,27 @@ export function DetailsSection({ setup, update, isOpen, onToggle }: DetailsSecti
   const customizationCount = GROUPS.reduce((total, group) => total + setup[group.key].length, 0);
 
   return (
-    <section className="w-full" aria-label="Details">
-      <CollapsibleSection
-        title="Details"
-        collapsedSummary={`${customizationCount} selections: walls, windows, ceilings, lights, focal points, view`}
-        isOpen={isOpen}
-        onToggle={onToggle}
-      >
-        <div className="space-y-2">
-          {GROUPS.map((group) => (
-            <OptionGroup
-              key={group.key}
-              legend={group.legend}
-              allLabel={group.allLabel}
-              options={group.options}
-              selected={setup[group.key]}
-              onChange={(next) => update({ [group.key]: next } as Partial<Setup>)}
-              surprise
-            />
-          ))}
-        </div>
-      </CollapsibleSection>
-    </section>
+    <SectionCard
+      id="details"
+      title="Details"
+      icon="details"
+      isOpen={isOpen}
+      onToggle={onToggle}
+      summary={`${customizationCount} selections: walls, windows, ceilings, lights, focal points, view`}
+    >
+      <div className="space-y-2">
+        {GROUPS.map((group) => (
+          <OptionGroup
+            key={group.key}
+            legend={group.legend}
+            allLabel={group.allLabel}
+            options={group.options}
+            selected={setup[group.key]}
+            onChange={(next) => update({ [group.key]: next } as Partial<Setup>)}
+            surprise
+          />
+        ))}
+      </div>
+    </SectionCard>
   );
 }

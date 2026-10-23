@@ -6,7 +6,7 @@ import { getIntensityStep } from "@/lib/looks";
 import { buildPromptPreview, buildPromptPreviewColors } from "@/lib/promptPreview";
 import type { Setup } from "@/lib/setup";
 import type { GenerationUiState } from "@/lib/useGeneration";
-import { SECTION_CLASS } from "./fields";
+import { SectionCard } from "./SectionCard";
 
 const GENERATION_STATE_LABELS: Record<GenerationUiState, string> = {
   idle: "Idle",
@@ -60,10 +60,7 @@ export function GenerationPanel({
           : "border-[#262B36] bg-[#1D2230] text-[#F5F7FA]";
 
   return (
-    <section className={SECTION_CLASS} aria-labelledby="generate-heading">
-      <h2 id="generate-heading" className="text-sm font-semibold">
-        Generate
-      </h2>
+    <SectionCard id="generate" title="Generate" icon="generate">
       <SummaryCard
         title="Generation Summary"
         lines={[
@@ -155,6 +152,6 @@ export function GenerationPanel({
           Cancel
         </button>
       </div>
-    </section>
+    </SectionCard>
   );
 }

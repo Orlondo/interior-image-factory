@@ -7,22 +7,29 @@ import {
   type FileSizeOption,
   type Setup,
 } from "@/lib/setup";
-import { SECTION_CLASS, SelectField } from "./fields";
+import { SelectField } from "./fields";
+import { SectionCard } from "./SectionCard";
 
 type OutputSectionProps = {
   setup: Setup;
   update: (patch: Partial<Setup>) => void;
+  isOpen: boolean;
+  onToggle: () => void;
 };
 
-export function OutputSection({ setup, update }: OutputSectionProps) {
+export function OutputSection({ setup, update, isOpen, onToggle }: OutputSectionProps) {
   const batch = describeBatch(countCombinations(setup), setup.maxImages);
 
   return (
-    <section className={SECTION_CLASS} aria-labelledby="output-heading">
-      <h2 id="output-heading" className="text-sm font-semibold">
-        Output
-      </h2>
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
+    <SectionCard
+      id="output"
+      title="Output"
+      icon="output"
+      isOpen={isOpen}
+      onToggle={onToggle}
+      summary={`${setup.aspectRatio} · ${setup.maxImages} images · ${setup.fileSize} files`}
+    >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
         <SelectField
           label="Aspect ratio"
           value={setup.aspectRatio}
@@ -60,6 +67,6 @@ export function OutputSection({ setup, update }: OutputSectionProps) {
       <p role="status" className="mt-3 text-sm text-[#98A2B3]">
         {batch.message}
       </p>
-    </section>
+    </SectionCard>
   );
 }

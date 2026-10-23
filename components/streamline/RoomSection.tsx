@@ -4,7 +4,8 @@ import { RoomTypePicker } from "@/components/ui-modernization";
 import { homeQualities, roomSizes, rooms, styles, type RoomType } from "@/lib/combinations";
 import { setAll, toggleValue } from "@/lib/selection";
 import type { HomeQuality, Setup } from "@/lib/setup";
-import { SECTION_CLASS, SelectField } from "./fields";
+import { SelectField } from "./fields";
+import { SectionCard } from "./SectionCard";
 
 const ROOM_CATEGORY_DEFINITIONS: Array<{ title: string; rooms: string[] }> = [
   {
@@ -40,9 +41,17 @@ const HOME_QUALITY_DESCRIPTIONS: Record<HomeQuality, string> = {
 type RoomSectionProps = {
   setup: Setup;
   update: (patch: Partial<Setup>) => void;
+  isOpen: boolean;
+  onToggle: () => void;
 };
 
-export function RoomSection({ setup, update }: RoomSectionProps) {
+function describeRooms(selected: string[]): string {
+  if (selected.length === 0) return "no room type";
+  if (selected.length <= 2) return selected.join(" and ");
+  return `${selected.length} room types`;
+}
+
+export function RoomSection({ setup, update, isOpen, onToggle }: RoomSectionProps) {
   function toggleRoom(value: RoomType | "All") {
     update({
       rooms:
@@ -53,11 +62,15 @@ export function RoomSection({ setup, update }: RoomSectionProps) {
   }
 
   return (
-    <section className={SECTION_CLASS} aria-labelledby="room-heading">
-      <h2 id="room-heading" className="text-sm font-semibold">
-        Room
-      </h2>
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
+    <SectionCard
+      id="room"
+      title="Room"
+      icon="room"
+      isOpen={isOpen}
+      onToggle={onToggle}
+      summary={`${describeRooms(setup.rooms)} · ${setup.designStyle} · ${setup.homeQuality} · ${setup.roomSize}`}
+    >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
         <div className="md:col-span-3">
           <RoomTypePicker
             selectedRooms={setup.rooms}
@@ -104,6 +117,6 @@ export function RoomSection({ setup, update }: RoomSectionProps) {
           ))}
         </SelectField>
       </div>
-    </section>
+    </SectionCard>
   );
 }

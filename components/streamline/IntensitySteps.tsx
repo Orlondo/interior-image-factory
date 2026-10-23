@@ -34,7 +34,7 @@ export function IntensitySteps({ intensity, onChange }: IntensityStepsProps) {
               className={`min-h-[42px] rounded-[10px] border px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4F8CFF] ${
                 selected
                   ? "border-[#4F8CFF] bg-[#4F8CFF] text-[#F5F7FA]"
-                  : "border-[#262B36] bg-[#171A21] text-[#F5F7FA] hover:border-[#4F8CFF]/60"
+                  : "border-[#3A4252] bg-[#262B36] text-[#F5F7FA] hover:border-[#4F8CFF] hover:bg-[#2D3342]"
               }`}
             >
               {step.label}
