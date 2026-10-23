@@ -260,3 +260,12 @@ Decisions made after the first build, written down so the record stays in one pl
 - **FR-021**: Buttons, chips and intensity steps MUST use a raised fill and a clear border so
   they stand out from their card (minimum 1.15:1 luminance ratio against the card).
 - Out of scope: a sticky section navigator, and larger section headings with descriptions.
+
+## Update: pinned title, collapsible Saved setups, collapsed Prompt Preview
+
+This supersedes FR-015, FR-017 and FR-018 above where they say Saved setups is not collapsible and that Expand all and Collapse all cover four sections.
+
+- **Pinned header.** The page has a title bar, "Interior Image Factory" ("Image Factory" on narrow screens), pinned to the top of the screen while you scroll, like the Channel Studio header. Expand all and Collapse all moved into it. The browser tab title is now "Interior Image Factory".
+- **Saved setups collapse.** Saved setups is now the fifth collapsible section and starts closed, with a one-line summary ("none saved yet" or "3 saved"). Expand all and Collapse all include it. Open/closed state saved before this change still loads: the sections keep their state and Saved setups starts closed.
+- **Prompt Preview starts collapsed.** It still shows the coverage and intensity summary while closed, and opens on click.
+- Test coverage: `tests/sections.test.ts` (defaults, older saved state, expand/collapse all) and a browser run at 1200 px and 375 px (pinned header while scrolled, no clipped title or buttons, collapsed defaults, remembered state, no overflow).

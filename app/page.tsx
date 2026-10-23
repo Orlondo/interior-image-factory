@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { AppHeader } from "@/components/streamline/AppHeader";
 import { DetailsSection } from "@/components/streamline/DetailsSection";
 import { GenerationPanel } from "@/components/streamline/GenerationPanel";
 import { ImageReview } from "@/components/streamline/ImageReview";
@@ -70,79 +71,90 @@ export default function Home() {
   }
 
   return (
-    <main className="mx-auto max-w-7xl overflow-x-hidden px-4 py-6 text-[#F5F7FA] sm:px-6 lg:px-10">
-      <div className="space-y-4">
-        <SetupsBar
-          savedSetups={savedSetups.items}
-          onSave={saveSetup}
-          onApply={applySetup}
-          onDelete={(id) => savedSetups.save(savedSetups.items.filter((item) => item.id !== id))}
-          onReset={() => setSetup(DEFAULT_SETUP)}
-        />
+    <>
+      <AppHeader
+        actions={
+          <>
+            <button
+              type="button"
+              className={SECONDARY_BUTTON_CLASS}
+              aria-label="Expand all"
+              onClick={() => sections.setAll(true)}
+            >
+              <span className="sm:hidden">Expand</span>
+              <span className="hidden sm:inline">Expand all</span>
+            </button>
+            <button
+              type="button"
+              className={SECONDARY_BUTTON_CLASS}
+              aria-label="Collapse all"
+              onClick={() => sections.setAll(false)}
+            >
+              <span className="sm:hidden">Collapse</span>
+              <span className="hidden sm:inline">Collapse all</span>
+            </button>
+          </>
+        }
+      />
+      <main className="mx-auto w-full max-w-7xl overflow-x-hidden px-4 py-6 text-[#F5F7FA] sm:px-6 lg:px-10">
+        <div className="space-y-4">
+          <SetupsBar
+            savedSetups={savedSetups.items}
+            onSave={saveSetup}
+            onApply={applySetup}
+            onDelete={(id) => savedSetups.save(savedSetups.items.filter((item) => item.id !== id))}
+            onReset={() => setSetup(DEFAULT_SETUP)}
+            isOpen={sections.state.setups}
+            onToggle={() => sections.toggle("setups")}
+          />
 
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            className={SECONDARY_BUTTON_CLASS}
-            onClick={() => sections.setAll(true)}
-          >
-            Expand all
-          </button>
-          <button
-            type="button"
-            className={SECONDARY_BUTTON_CLASS}
-            onClick={() => sections.setAll(false)}
-          >
-            Collapse all
-          </button>
+          <RoomSection
+            setup={setup}
+            update={update}
+            isOpen={sections.state.room}
+            onToggle={() => sections.toggle("room")}
+          />
+
+          <LookSection
+            setup={setup}
+            update={update}
+            savedLooks={savedLooks.items}
+            onSaveLook={saveLook}
+            onDeleteLook={(id) => savedLooks.save(savedLooks.items.filter((item) => item.id !== id))}
+            isOpen={sections.state.look}
+            onToggle={() => sections.toggle("look")}
+            isCustomizeOpen={isCustomizeOpen}
+            onToggleCustomize={() => setIsCustomizeOpen((previous) => !previous)}
+          />
+
+          <DetailsSection
+            setup={setup}
+            update={update}
+            isOpen={sections.state.details}
+            onToggle={() => sections.toggle("details")}
+          />
+
+          <OutputSection
+            setup={setup}
+            update={update}
+            isOpen={sections.state.output}
+            onToggle={() => sections.toggle("output")}
+          />
+
+          <GenerationPanel
+            setup={setup}
+            isGenerating={generation.isGenerating}
+            generationUiState={generation.generationUiState}
+            generationProgress={generation.generationProgress}
+            generationStatusMessage={generation.generationStatusMessage}
+            canGenerate={canGenerate}
+            onGenerate={() => generation.generate(setup)}
+            onCancel={generation.cancelGeneration}
+          />
         </div>
 
-        <RoomSection
-          setup={setup}
-          update={update}
-          isOpen={sections.state.room}
-          onToggle={() => sections.toggle("room")}
-        />
-
-        <LookSection
-          setup={setup}
-          update={update}
-          savedLooks={savedLooks.items}
-          onSaveLook={saveLook}
-          onDeleteLook={(id) => savedLooks.save(savedLooks.items.filter((item) => item.id !== id))}
-          isOpen={sections.state.look}
-          onToggle={() => sections.toggle("look")}
-          isCustomizeOpen={isCustomizeOpen}
-          onToggleCustomize={() => setIsCustomizeOpen((previous) => !previous)}
-        />
-
-        <DetailsSection
-          setup={setup}
-          update={update}
-          isOpen={sections.state.details}
-          onToggle={() => sections.toggle("details")}
-        />
-
-        <OutputSection
-          setup={setup}
-          update={update}
-          isOpen={sections.state.output}
-          onToggle={() => sections.toggle("output")}
-        />
-
-        <GenerationPanel
-          setup={setup}
-          isGenerating={generation.isGenerating}
-          generationUiState={generation.generationUiState}
-          generationProgress={generation.generationProgress}
-          generationStatusMessage={generation.generationStatusMessage}
-          canGenerate={canGenerate}
-          onGenerate={() => generation.generate(setup)}
-          onCancel={generation.cancelGeneration}
-        />
-      </div>
-
-      <ImageReview images={generation.images} />
-    </main>
+        <ImageReview images={generation.images} />
+      </main>
+    </>
   );
 }

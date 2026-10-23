@@ -12,9 +12,19 @@ type SetupsBarProps = {
   onApply: (id: string) => void;
   onDelete: (id: string) => void;
   onReset: () => void;
+  isOpen: boolean;
+  onToggle: () => void;
 };
 
-export function SetupsBar({ savedSetups, onSave, onApply, onDelete, onReset }: SetupsBarProps) {
+export function SetupsBar({
+  savedSetups,
+  onSave,
+  onApply,
+  onDelete,
+  onReset,
+  isOpen,
+  onToggle,
+}: SetupsBarProps) {
   const [selectedId, setSelectedId] = useState("");
   const [newName, setNewName] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -34,7 +44,18 @@ export function SetupsBar({ savedSetups, onSave, onApply, onDelete, onReset }: S
   }
 
   return (
-    <SectionCard id="setups" title="Saved setups" icon="setups">
+    <SectionCard
+      id="setups"
+      title="Saved setups"
+      icon="setups"
+      isOpen={isOpen}
+      onToggle={onToggle}
+      summary={
+        savedSetups.length === 0
+          ? "none saved yet"
+          : `${savedSetups.length} saved`
+      }
+    >
       <p className="text-xs text-[#98A2B3]">
         A setup remembers every selection on this page, saved in this browser.
       </p>

@@ -40,7 +40,7 @@ export function GenerationPanel({
   onGenerate,
   onCancel,
 }: GenerationPanelProps) {
-  const [isPromptPreviewOpen, setIsPromptPreviewOpen] = useState(true);
+  const [isPromptPreviewOpen, setIsPromptPreviewOpen] = useState(false);
   const promptPreview = useMemo(() => buildPromptPreview(setup), [setup]);
   const promptPreviewColorData = useMemo(() => buildPromptPreviewColors(setup), [setup]);
   const intensityStep = getIntensityStep(setup.colorIntensity);
