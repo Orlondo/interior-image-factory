@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
-import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  buildUnknownManifest,
+  readManifest,
+  safeBatchId,
+  writeCompletedBatch,
+} from "@/lib/batchManifest";
 import { fetchBatchStatus, fetchFileContent } from "@/lib/openaiBatch";
 
 type ImageData = {
@@ -73,7 +78,7 @@ export async function GET(request: Request) {
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
 
-    const parsedResults = lines
+    const entries = lines
       .map((line) => JSON.parse(line) as BatchOutputLine)
       .map((entry) => ({
         index: getCustomIdIndex(entry.custom_id),
@@ -82,27 +87,32 @@ export async function GET(request: Request) {
             ? ({ data: entry.response.body?.data } as ImagesResponse)
             : ({ data: [] } as ImagesResponse),
       }))
-      .sort((left, right) => left.index - right.index)
-      .map((entry) => entry.result);
+      .sort((left, right) => left.index - right.index);
 
-    await mkdir(OUTPUT_DIR, { recursive: true });
+    const parsedResults = entries.map((entry) => entry.result);
 
-    const runId = Date.now();
-
-    await Promise.all(
-      parsedResults.flatMap((result, resultIndex) =>
-        (result.data ?? []).flatMap((image, imageIndex) => {
-          if (!image.b64_json) {
-            return [];
-          }
-
-          const fileName = `generated-${runId}-${resultIndex}-${imageIndex}.png`;
-          const filePath = path.join(OUTPUT_DIR, fileName);
-
-          return [writeFile(filePath, Buffer.from(image.b64_json, "base64"))];
-        })
-      )
+    // Use the details saved when the batch was submitted. Older batches have none.
+    const batchFolderId = safeBatchId(batch.id);
+    const savedManifest = await readManifest(OUTPUT_DIR, batchFolderId);
+    const highestIndex = entries.reduce(
+      (highest, entry) =>
+        entry.index === Number.MAX_SAFE_INTEGER ? highest : Math.max(highest, entry.index),
+      -1
     );
+    const pending =
+      savedManifest ?? buildUnknownManifest(batchFolderId, Math.max(highestIndex + 1, 0));
+
+    // Fetching the same batch twice must not rewrite a finished folder.
+    if (savedManifest?.status !== "complete") {
+      await writeCompletedBatch(
+        OUTPUT_DIR,
+        pending,
+        entries.flatMap((entry) => {
+          const b64 = entry.result.data?.find((image) => image.b64_json)?.b64_json;
+          return b64 && entry.index < pending.images.length ? [{ index: entry.index, b64 }] : [];
+        })
+      );
+    }
 
     return NextResponse.json({
       batchId: batch.id,

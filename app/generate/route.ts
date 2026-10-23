@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   AUTO_PALETTE_VARIATION_DEFAULT,
@@ -32,6 +31,11 @@ import {
 } from "@/lib/combinations";
 import { submitImageBatchJob } from "@/lib/openaiBatch";
 import { buildPrompt } from "../../lib/promptBuilder";
+import {
+  buildPendingManifest,
+  writeCompletedBatch,
+  writePendingManifest,
+} from "@/lib/batchManifest";
 import { buildScenarioPlan } from "@/lib/scenarioPlan";
 import {
   countsInOrder,
@@ -707,6 +711,21 @@ export async function POST(request: Request) {
       return `${prompt}\n\nVariation ${index + 1} of ${maxImages}.`;
     });
 
+    const batchSettings = {
+      designStyle: styleSelection,
+      homeQuality: homeQualitySelection,
+      roomSize: roomSizeSelection,
+      colorMood: colorMoodSelection,
+      colorIntensity: colorIntensitySelection,
+      colorStrategy: colorStrategySelection,
+      colorCoverage: colorCoverageSelection,
+      heroColor: heroColorSelection,
+      aspectRatio,
+      fileSize,
+      quality,
+      size,
+    };
+
     if (maxImages > BATCH_MODE_THRESHOLD) {
       const submittedBatch = await submitImageBatchJob({
         prompts,
@@ -718,6 +737,22 @@ export async function POST(request: Request) {
           requested_images: String(maxImages),
         },
       });
+
+      // The details of each image are saved now, because the result route runs later
+      // and cannot know them. A failure here must not hide the submitted batch.
+      try {
+        await writePendingManifest(
+          OUTPUT_DIR,
+          buildPendingManifest({
+            id: submittedBatch.id,
+            mode: "openai-batch",
+            settings: batchSettings,
+            scenarios,
+          })
+        );
+      } catch (error) {
+        console.error("Could not save batch details", error);
+      }
 
       return NextResponse.json({
         mode: "batch",
@@ -739,29 +774,20 @@ export async function POST(request: Request) {
       results.push(...batchResults);
     }
 
-    await mkdir(OUTPUT_DIR, { recursive: true });
+    const savedImages = results.flatMap((result, resultIndex) => {
+      const b64 = result.data?.find((image) => image.b64_json)?.b64_json;
+      return b64 ? [{ index: resultIndex, b64 }] : [];
+    });
 
-    const runId = Date.now();
-
-    await Promise.all(
-      results.flatMap((result, resultIndex) =>
-        (result.data ?? []).flatMap((image, imageIndex) => {
-          if (!image.b64_json) {
-            return [];
-          }
-
-          const fileName = `generated-${runId}-${resultIndex}-${imageIndex}.png`;
-          const filePath = path.join(OUTPUT_DIR, fileName);
-
-          return [writeFile(filePath, Buffer.from(image.b64_json, "base64"))];
-        })
-      )
-    );
-
-    await writeFile(
-      path.join(OUTPUT_DIR, "responses.json"),
-      JSON.stringify(results, null, 2),
-      "utf-8"
+    await writeCompletedBatch(
+      OUTPUT_DIR,
+      buildPendingManifest({
+        id: `run-${Date.now()}`,
+        mode: "direct",
+        settings: batchSettings,
+        scenarios,
+      }),
+      savedImages
     );
 
     return NextResponse.json(results);
