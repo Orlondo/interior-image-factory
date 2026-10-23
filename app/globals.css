@@ -36,3 +36,28 @@ body {
 body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+/*
+ * Dropdowns: replace the browser's arrow, which sits hard against the right edge, with a chevron
+ * placed 12px in from the edge, and keep the text clear of it. Only longhand properties are set so
+ * the Tailwind classes on each select (border, fill, height, text) keep working.
+ */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2398A2B3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 8l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem 1rem;
+  padding-right: 2.25rem;
+  text-overflow: ellipsis;
+}
+
+select:hover:not(:disabled),
+select:focus-visible {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23F5F7FA' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 8l5 5 5-5'/%3E%3C/svg%3E");
+}
+
+select:disabled {
+  opacity: 0.6;
+}
