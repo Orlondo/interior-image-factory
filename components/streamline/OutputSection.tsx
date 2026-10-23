@@ -1,6 +1,7 @@
 "use client";
 
 import { describeBatch, countCombinations } from "@/lib/batch";
+import { rescaleCounts } from "@/lib/roomMix";
 import {
   MAX_IMAGE_CHOICES,
   type AspectRatioOption,
@@ -44,7 +45,14 @@ export function OutputSection({ setup, update, isOpen, onToggle }: OutputSection
         <SelectField
           label="Max images"
           value={setup.maxImages}
-          onChange={(value) => update({ maxImages: Number(value) })}
+          onChange={(value) => {
+            const maxImages = Number(value);
+            update(
+              setup.roomSplitMode === "custom"
+                ? { maxImages, roomCounts: rescaleCounts(setup.rooms, setup.roomCounts, maxImages) }
+                : { maxImages }
+            );
+          }}
         >
           {MAX_IMAGE_CHOICES.map((choice) => (
             <option key={choice} value={choice}>

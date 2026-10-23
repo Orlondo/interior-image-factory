@@ -9,6 +9,7 @@ import { OutputSection } from "@/components/streamline/OutputSection";
 import { RoomSection } from "@/components/streamline/RoomSection";
 import { SECONDARY_BUTTON_CLASS } from "@/components/streamline/fields";
 import { SetupsBar } from "@/components/streamline/SetupsBar";
+import { sumCounts } from "@/lib/roomMix";
 import { getLookValues } from "@/lib/looks";
 import {
   SAVED_LOOKS_KEY,
@@ -36,6 +37,11 @@ export default function Home() {
   const update = useCallback((patch: Partial<Setup>) => {
     setSetup((previous) => ({ ...previous, ...patch }));
   }, []);
+
+  const canGenerate =
+    setup.roomSplitMode !== "custom" ||
+    setup.rooms.length < 2 ||
+    sumCounts(setup.rooms, setup.roomCounts) === setup.maxImages;
 
   function saveLook(name: string): string | null {
     const result = savedLooks.save([
@@ -130,6 +136,7 @@ export default function Home() {
           generationUiState={generation.generationUiState}
           generationProgress={generation.generationProgress}
           generationStatusMessage={generation.generationStatusMessage}
+          canGenerate={canGenerate}
           onGenerate={() => generation.generate(setup)}
           onCancel={generation.cancelGeneration}
         />

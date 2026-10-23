@@ -2,9 +2,10 @@
 
 import { RoomTypePicker } from "@/components/ui-modernization";
 import { homeQualities, roomSizes, rooms, styles, type RoomType } from "@/lib/combinations";
-import { setAll, toggleValue } from "@/lib/selection";
+import { evenSplit } from "@/lib/roomMix";
 import type { HomeQuality, Setup } from "@/lib/setup";
 import { SelectField } from "./fields";
+import { RoomMix } from "./RoomMix";
 import { SectionCard } from "./SectionCard";
 
 const ROOM_CATEGORY_DEFINITIONS: Array<{ title: string; rooms: string[] }> = [
@@ -52,12 +53,14 @@ function describeRooms(selected: string[]): string {
 }
 
 export function RoomSection({ setup, update, isOpen, onToggle }: RoomSectionProps) {
-  function toggleRoom(value: RoomType | "All") {
+  function changeRooms(nextRooms: RoomType[]) {
+    // A different set of rooms starts the custom counts over from an even split.
+    const keepCustom = setup.roomSplitMode === "custom" && nextRooms.length >= 2;
+
     update({
-      rooms:
-        value === "All"
-          ? setAll(rooms, setup.rooms.length !== rooms.length)
-          : toggleValue(setup.rooms, value),
+      rooms: nextRooms,
+      roomSplitMode: keepCustom ? "custom" : "even",
+      roomCounts: keepCustom ? evenSplit(nextRooms, setup.maxImages) : {},
     });
   }
 
@@ -75,9 +78,12 @@ export function RoomSection({ setup, update, isOpen, onToggle }: RoomSectionProp
           <RoomTypePicker
             selectedRooms={setup.rooms}
             roomTypeCategories={ROOM_TYPE_CATEGORIES}
-            allRooms={rooms}
-            onToggleRoom={toggleRoom}
+            onChange={changeRooms}
           />
+        </div>
+
+        <div className="md:col-span-3">
+          <RoomMix setup={setup} update={update} />
         </div>
 
         <SelectField

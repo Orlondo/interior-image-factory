@@ -25,6 +25,7 @@ import {
   type HeroColor,
   type RoomType,
 } from "./combinations";
+import type { RoomCounts } from "./roomMix";
 
 export type FileSizeOption = "small" | "medium" | "large";
 export type AspectRatioOption = "1:1" | "4:5" | "9:16" | "16:9";
@@ -58,7 +59,12 @@ export type Setup = {
   fileSize: FileSizeOption;
   aspectRatio: AspectRatioOption;
   maxImages: number;
+  /** "even" splits images equally across rooms; "custom" uses `roomCounts`. */
+  roomSplitMode: RoomSplitMode;
+  roomCounts: RoomCounts;
 };
+
+export type RoomSplitMode = "even" | "custom";
 
 export const MAX_IMAGE_CHOICES = [4, 8, 12, 16, 20, 24, 32, 50, 75, 100] as const;
 export const ASPECT_RATIOS: AspectRatioOption[] = ["1:1", "4:5", "9:16", "16:9"];
@@ -86,10 +92,14 @@ export const DEFAULT_SETUP: Setup = {
   fileSize: "small",
   aspectRatio: "16:9",
   maxImages: 12,
+  roomSplitMode: "even",
+  roomCounts: {},
 };
 
 /** The exact request body the page has always sent to /generate. */
 export function buildGeneratePayload(setup: Setup) {
+  const customSplit = setup.roomSplitMode === "custom" && setup.rooms.length >= 2;
+
   return {
     rooms: setup.rooms,
     outsideViews: setup.views,
@@ -113,6 +123,7 @@ export function buildGeneratePayload(setup: Setup) {
     fileSize: setup.fileSize,
     aspectRatio: setup.aspectRatio,
     maxImages: setup.maxImages,
+    ...(customSplit ? { roomCounts: setup.roomCounts } : {}),
   };
 }
 
@@ -176,5 +187,36 @@ export function sanitizeSetup(raw: unknown): Setup {
       (MAX_IMAGE_CHOICES as readonly number[]).includes(source.maxImages)
         ? source.maxImages
         : d.maxImages,
+    ...sanitizeRoomSplit(source, listOf(source.rooms, rooms, d.rooms)),
   };
+}
+
+function sanitizeRoomSplit(
+  source: Record<string, unknown>,
+  selectedRooms: string[]
+): Pick<Setup, "roomSplitMode" | "roomCounts"> {
+  const rawCounts =
+    typeof source.roomCounts === "object" && source.roomCounts !== null
+      ? (source.roomCounts as Record<string, unknown>)
+      : {};
+  const counts: RoomCounts = {};
+
+  for (const room of selectedRooms) {
+    const count = rawCounts[room];
+    counts[room] = typeof count === "number" && Number.isInteger(count) && count >= 0 ? count : 0;
+  }
+
+  const maxImages =
+    typeof source.maxImages === "number" &&
+    (MAX_IMAGE_CHOICES as readonly number[]).includes(source.maxImages)
+      ? source.maxImages
+      : DEFAULT_SETUP.maxImages;
+  const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+
+  // Old setups have no counts, and counts that no longer fit fall back to the even split.
+  if (source.roomSplitMode !== "custom" || total !== maxImages) {
+    return { roomSplitMode: "even", roomCounts: {} };
+  }
+
+  return { roomSplitMode: "custom", roomCounts: counts };
 }

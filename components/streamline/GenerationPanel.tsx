@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { CollapsibleSection, SummaryCard } from "@/components/ui-modernization";
 import { getIntensityStep } from "@/lib/looks";
 import { buildPromptPreview, buildPromptPreviewColors } from "@/lib/promptPreview";
+import { describeSplit, evenSplit } from "@/lib/roomMix";
 import type { Setup } from "@/lib/setup";
 import type { GenerationUiState } from "@/lib/useGeneration";
 import { SectionCard } from "./SectionCard";
@@ -24,6 +25,7 @@ type GenerationPanelProps = {
   generationUiState: GenerationUiState;
   generationProgress: number | null;
   generationStatusMessage: string;
+  canGenerate: boolean;
   onGenerate: () => void;
   onCancel: () => void;
 };
@@ -34,6 +36,7 @@ export function GenerationPanel({
   generationUiState,
   generationProgress,
   generationStatusMessage,
+  canGenerate,
   onGenerate,
   onCancel,
 }: GenerationPanelProps) {
@@ -66,7 +69,14 @@ export function GenerationPanel({
         lines={[
           `${setup.designStyle} ${setup.homeQuality} ${setup.rooms[0] ?? "living room"}`,
           `${setup.aspectRatio} ${setup.aspectRatio === "16:9" ? "landscape" : "format"}`,
-          `${setup.maxImages} images`,
+          setup.rooms.length >= 2
+            ? `${setup.maxImages} images: ${describeSplit(
+                setup.rooms,
+                setup.roomSplitMode === "custom"
+                  ? setup.roomCounts
+                  : evenSplit(setup.rooms, setup.maxImages)
+              )}`
+            : `${setup.maxImages} images`,
           `${setup.colorCoverage} coverage, intensity ${summaryColorIntensity}`,
         ]}
       />
@@ -138,7 +148,7 @@ export function GenerationPanel({
       <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
         <button
           onClick={onGenerate}
-          disabled={isGenerating}
+          disabled={isGenerating || !canGenerate}
           className="h-[42px] w-full rounded-[10px] border border-[#4F8CFF] bg-[#4F8CFF] px-4 py-2 text-sm font-semibold text-[#F5F7FA] transition hover:bg-[#3E79EB] disabled:opacity-50 sm:w-auto"
         >
           {isGenerating ? "Generating..." : "Generate"}
@@ -151,6 +161,12 @@ export function GenerationPanel({
         >
           Cancel
         </button>
+
+        {!canGenerate ? (
+          <p role="status" className="text-sm text-[#FCD34D]">
+            Images per room must add up to {setup.maxImages} before you can generate.
+          </p>
+        ) : null}
       </div>
     </SectionCard>
   );

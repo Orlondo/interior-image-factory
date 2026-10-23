@@ -32,12 +32,13 @@ import {
 } from "@/lib/combinations";
 import { submitImageBatchJob } from "@/lib/openaiBatch";
 import { buildPrompt } from "../../lib/promptBuilder";
+import { buildScenarioPlan } from "@/lib/scenarioPlan";
 import {
-  FULL_ENUMERATION_LIMIT,
-  decodeIndex,
-  sampleDistinctIndices,
-  totalCombinations,
-} from "@/lib/scenarioSampling";
+  countsInOrder,
+  evenSplit,
+  validateRoomCounts,
+  type RoomCounts,
+} from "@/lib/roomMix";
 import {
   getDefaultWallColorPalette,
   getWallColorRandomPool,
@@ -92,18 +93,7 @@ type GeneratePayload = {
   fileSize?: FileSizeOption;
   aspectRatio?: AspectRatioOption;
   maxImages?: number;
-};
-
-type PromptScenario = {
-  room: RoomType;
-  view: string;
-  colorProfile: string;
-  focalPoints: string[];
-  windowStyle: string;
-  wall: string;
-  ceiling: string;
-  ceilingLight: string;
-  wallColorPalette: string;
+  roomCounts?: unknown;
 };
 
 const FILE_SIZE_TO_QUALITY: Record<FileSizeOption, "low" | "medium" | "high"> = {
@@ -311,21 +301,8 @@ function createSeededRandom(seed: number): () => number {
 
   return () => {
     state = Math.imul(state, 1664525) + 1013904223;
-    return ((state >>> 0) & 0xffffffff) / 0x100000000;
+    return (state >>> 0) / 0x100000000;
   };
-}
-
-function shuffleArray<T>(items: T[], random: () => number = Math.random): T[] {
-  const copy = [...items];
-
-  for (let index = copy.length - 1; index > 0; index -= 1) {
-    const randomIndex = Math.floor(random() * (index + 1));
-    const temp = copy[index] as T;
-    copy[index] = copy[randomIndex] as T;
-    copy[randomIndex] = temp;
-  }
-
-  return copy;
 }
 
 async function generateWithRateLimitRetry(input: {
@@ -628,6 +605,22 @@ export async function POST(request: Request) {
         ? Math.max(1, Math.min(payload.maxImages, ABSOLUTE_MAX_PROMPTS))
         : DEFAULT_MAX_PROMPTS;
 
+    if (payload.roomCounts !== undefined) {
+      const roomCountsError = validateRoomCounts(payload.roomCounts, roomSelection, maxImages);
+
+      if (roomCountsError) {
+        return NextResponse.json(
+          { error: "Invalid request payload", details: [roomCountsError] },
+          { status: 400 }
+        );
+      }
+    }
+
+    const roomCountsByRoom: RoomCounts =
+      payload.roomCounts === undefined
+        ? evenSplit(roomSelection, maxImages)
+        : (payload.roomCounts as RoomCounts);
+
     const quality = FILE_SIZE_TO_QUALITY[fileSize];
     const size = FILE_SIZE_AND_ASPECT_TO_SIZE[fileSize][aspectRatio];
     const fallbackSize = FALLBACK_ASPECT_RATIO_TO_SIZE[aspectRatio];
@@ -655,139 +648,34 @@ export async function POST(request: Request) {
       randomRunSalt,
       fileSize,
       aspectRatio,
+      roomCounts: payload.roomCounts ?? null,
     });
 
     const seededRandom = createSeededRandom(hashStringToSeed(seedInput));
 
-    const buildAllScenariosByRoom = (): PromptScenario[][] =>
-      roomSelection.map((room) =>
-        viewSelection.flatMap((view) =>
-          colorProfileSelection.flatMap((colorProfile) =>
-            focalPointSelection.length > 0
-              ? focalPointSelection.flatMap((focalPoint) =>
-                  windowSelection.flatMap((windowStyle) =>
-                    wallSelection.flatMap((wall) =>
-                      ceilingSelection.flatMap((ceiling) =>
-                        ceilingLightSelection.map((ceilingLight) => ({
-                          room,
-                          view,
-                          colorProfile,
-                          focalPoints: [focalPoint],
-                          windowStyle,
-                          wall,
-                          ceiling,
-                          ceilingLight,
-                          wallColorPalette: randomizeWallColor
-                            ? pickRandomItem(
-                                wallColorRandomPool,
-                                seededRandom
-                              )
-                            : wallColorPaletteSelection,
-                        }))
-                      )
-                    )
-                  )
-                )
-              : windowSelection.flatMap((windowStyle) =>
-                  wallSelection.flatMap((wall) =>
-                    ceilingSelection.flatMap((ceiling) =>
-                      ceilingLightSelection.map((ceilingLight) => ({
-                        room,
-                        view,
-                        colorProfile,
-                        focalPoints: [],
-                        windowStyle,
-                        wall,
-                        ceiling,
-                        ceilingLight,
-                        wallColorPalette: randomizeWallColor
-                          ? pickRandomItem(
-                              wallColorRandomPool,
-                              seededRandom
-                            )
-                          : wallColorPaletteSelection,
-                      }))
-                    )
-                  )
-                )
-          )
-        )
-      );
+    const scenarios = buildScenarioPlan({
+      rooms: roomSelection,
+      counts: countsInOrder(roomSelection, roomCountsByRoom),
+      views: viewSelection,
+      colorProfiles: colorProfileSelection,
+      focalPoints: focalPointSelection,
+      windowStyles: windowSelection,
+      walls: wallSelection,
+      ceilings: ceilingSelection,
+      ceilingLights: ceilingLightSelection,
+      random: seededRandom,
+      pickWallColorPalette: () =>
+        randomizeWallColor
+          ? pickRandomItem(wallColorRandomPool, seededRandom)
+          : wallColorPaletteSelection,
+    });
 
-
-    const scenarioGroupSizes = [
-      roomSelection.length,
-      viewSelection.length,
-      colorProfileSelection.length,
-      focalPointSelection.length,
-      windowSelection.length,
-      wallSelection.length,
-      ceilingSelection.length,
-      ceilingLightSelection.length,
-    ];
-
-    // Small selections list every combination. Very large ones would use huge
-    // amounts of memory, so a random sample of `maxImages` is built directly.
-    const buildSampledScenarios = (): PromptScenario[] =>
-      sampleDistinctIndices(
-        totalCombinations(scenarioGroupSizes),
-        maxImages,
-        seededRandom
-      ).map((combinationIndex) => {
-        const [room, view, colorProfile, focalPoint, windowStyle, wall, ceiling, ceilingLight] =
-          decodeIndex(combinationIndex, scenarioGroupSizes);
-
-        return {
-          room: roomSelection[room ?? 0] as RoomType,
-          view: viewSelection[view ?? 0] as string,
-          colorProfile: colorProfileSelection[colorProfile ?? 0] as string,
-          focalPoints:
-            focalPointSelection.length > 0
-              ? [focalPointSelection[focalPoint ?? 0] as string]
-              : [],
-          windowStyle: windowSelection[windowStyle ?? 0] as string,
-          wall: wallSelection[wall ?? 0] as string,
-          ceiling: ceilingSelection[ceiling ?? 0] as string,
-          ceilingLight: ceilingLightSelection[ceilingLight ?? 0] as string,
-          wallColorPalette: randomizeWallColor
-            ? pickRandomItem(wallColorRandomPool, seededRandom)
-            : wallColorPaletteSelection,
-        };
-      });
-
-    const scenariosByRoom: PromptScenario[][] =
-      totalCombinations(scenarioGroupSizes) <= FULL_ENUMERATION_LIMIT
-        ? buildAllScenariosByRoom()
-        : [buildSampledScenarios()];
-
-    const maxRoomPromptLength = scenariosByRoom.reduce(
-      (maxLength, roomPrompts) => Math.max(maxLength, roomPrompts.length),
-      0
-    );
-
-    const baseScenarios: PromptScenario[] = [];
-
-    for (let index = 0; index < maxRoomPromptLength; index += 1) {
-      scenariosByRoom.forEach((roomScenarios) => {
-        const scenario = roomScenarios[index];
-
-        if (scenario) {
-          baseScenarios.push(scenario);
-        }
-      });
-    }
-
-    if (baseScenarios.length === 0) {
+    if (scenarios.length === 0) {
       throw new Error("No prompts could be generated from the selected options");
     }
 
-    const shuffledScenarios = shuffleArray(baseScenarios, seededRandom);
-
     const prompts = Array.from({ length: maxImages }, (_, index) => {
-      const fallbackScenario = baseScenarios[0];
-      const scenario =
-        shuffledScenarios[index % Math.max(1, shuffledScenarios.length)] ??
-        fallbackScenario;
+      const scenario = scenarios[index];
 
       if (!scenario) {
         throw new Error("Unable to select a prompt scenario");
