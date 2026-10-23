@@ -3,6 +3,7 @@
 import { RoomTypePicker } from "@/components/ui-modernization";
 import { homeQualities, roomSizes, rooms, styles, type RoomType } from "@/lib/combinations";
 import { evenSplit } from "@/lib/roomMix";
+import { resolveQuickSets } from "@/lib/roomPicker";
 import type { HomeQuality, Setup } from "@/lib/setup";
 import { SelectField } from "./fields";
 import { RoomMix } from "./RoomMix";
@@ -30,6 +31,8 @@ const ROOM_TYPE_CATEGORIES = ROOM_CATEGORY_DEFINITIONS.map((category) => ({
   ...category,
   rooms: category.rooms.filter((room): room is RoomType => rooms.includes(room as RoomType)),
 })).filter((category) => category.rooms.length > 0);
+
+const QUICK_SETS = resolveQuickSets(rooms);
 
 const HOME_QUALITY_DESCRIPTIONS: Record<HomeQuality, string> = {
   "builder's grade layout": "Standard tract-home layout with practical finishes and simpler detailing.",
@@ -78,6 +81,7 @@ export function RoomSection({ setup, update, isOpen, onToggle }: RoomSectionProp
           <RoomTypePicker
             selectedRooms={setup.rooms}
             roomTypeCategories={ROOM_TYPE_CATEGORIES}
+            quickSets={QUICK_SETS}
             onChange={changeRooms}
           />
         </div>

@@ -1,7 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import type { RoomType } from "@/lib/combinations";
+import {
+  type QuickSet,
+  countSelected,
+  filterGroups,
+  initialOpenGroups,
+  quickSetMatches,
+  selectedInGroup,
+} from "@/lib/roomPicker";
 import { ChipGroup } from "./ChipGroup";
 
 type RoomTypeCategory = {
@@ -12,6 +20,8 @@ type RoomTypeCategory = {
 type RoomTypePickerProps = {
   selectedRooms: RoomType[];
   roomTypeCategories: RoomTypeCategory[];
+  /** One-click sets of rooms. Choosing one replaces the current selection. */
+  quickSets?: QuickSet[];
   /** Called with the full new selection, so bulk changes happen in one update. */
   onChange: (rooms: RoomType[]) => void;
 };
@@ -23,34 +33,44 @@ function capitalize(room: string): string {
   return room.charAt(0).toUpperCase() + room.slice(1);
 }
 
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      className={`h-4 w-4 shrink-0 text-[#98A2B3] transition-transform ${open ? "rotate-90" : ""}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M7 4l6 6-6 6" />
+    </svg>
+  );
+}
+
 export function RoomTypePicker({
   selectedRooms,
   roomTypeCategories,
+  quickSets = [],
   onChange,
 }: RoomTypePickerProps) {
+  const baseId = useId();
   const [searchQuery, setSearchQuery] = useState("");
+  // Groups with a selected room start open; the rest stay closed until you open them.
+  const [openGroups, setOpenGroups] = useState(() =>
+    initialOpenGroups(roomTypeCategories, selectedRooms)
+  );
   const allRooms = useMemo(
     () => roomTypeCategories.flatMap((category) => category.rooms),
     [roomTypeCategories]
   );
-
-  const visibleCategories = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    if (!query) {
-      return roomTypeCategories;
-    }
-
-    return roomTypeCategories
-      .map((category) => ({
-        ...category,
-        rooms: category.rooms.filter(
-          (room) =>
-            room.toLowerCase().includes(query) || category.title.toLowerCase().includes(query)
-        ),
-      }))
-      .filter((category) => category.rooms.length > 0);
-  }, [searchQuery, roomTypeCategories]);
+  const searching = searchQuery.trim().length > 0;
+  const visibleCategories = useMemo(
+    () => filterGroups(roomTypeCategories, searchQuery),
+    [searchQuery, roomTypeCategories]
+  );
 
   function toggleRoom(room: string) {
     const typed = room as RoomType;
@@ -69,6 +89,27 @@ export function RoomTypePicker({
         ? selectedRooms.filter((room) => !category.rooms.includes(room))
         : [...selectedRooms, ...category.rooms.filter((room) => !selectedRooms.includes(room))]
     );
+
+    // Choosing a whole category shows what was chosen.
+    if (!allSelected) {
+      setOpenGroups((current) => ({ ...current, [category.title]: true }));
+    }
+  }
+
+  function applyQuickSet(set: QuickSet) {
+    onChange(set.rooms as RoomType[]);
+    // Open every category the set touches, so the picks are visible.
+    setOpenGroups((current) => {
+      const next = { ...current };
+
+      for (const category of roomTypeCategories) {
+        if (category.rooms.some((room) => set.rooms.includes(room))) {
+          next[category.title] = true;
+        }
+      }
+
+      return next;
+    });
   }
 
   return (
@@ -103,6 +144,36 @@ export function RoomTypePicker({
         </div>
       </div>
 
+      {quickSets.length > 0 ? (
+        <div
+          className="mb-3 flex flex-wrap items-center gap-2"
+          role="group"
+          aria-label="Quick sets"
+        >
+          <span className="text-xs font-medium text-[#98A2B3]">Quick sets</span>
+          {quickSets.map((set) => {
+            const active = quickSetMatches(selectedRooms, set);
+
+            return (
+              <button
+                key={set.id}
+                type="button"
+                aria-pressed={active}
+                title={`Select ${set.rooms.map(capitalize).join(", ")} (replaces your current selection)`}
+                onClick={() => applyQuickSet(set)}
+                className={`min-h-[32px] rounded-full border px-3 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4F8CFF] ${
+                  active
+                    ? "border-[#4F8CFF] bg-[#4F8CFF]/15 text-[#F5F7FA]"
+                    : "border-[#3A4252] bg-[#262B36] text-[#F5F7FA] hover:border-[#4F8CFF]/60 hover:bg-[#2D3342]"
+                }`}
+              >
+                {set.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
       <input
         type="text"
         placeholder="Filter room types..."
@@ -118,40 +189,79 @@ export function RoomTypePicker({
           No room types found matching &quot;{searchQuery}&quot;
         </p>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {visibleCategories.map((category) => {
-            const fullCategory = roomTypeCategories.find((item) => item.title === category.title);
-            const allSelected = (fullCategory ?? category).rooms.every((room) =>
-              selectedRooms.includes(room)
-            );
+            const fullCategory =
+              roomTypeCategories.find((item) => item.title === category.title) ?? category;
+            const allSelected = fullCategory.rooms.every((room) => selectedRooms.includes(room));
+            const count = countSelected(fullCategory, selectedRooms);
+            // A search opens every matching group; otherwise each group keeps its own state.
+            const open = searching || Boolean(openGroups[category.title]);
+            const bodyId = `${baseId}-${category.title.replace(/\s+/g, "-").toLowerCase()}`;
+            const picked = selectedInGroup(fullCategory, selectedRooms);
 
             return (
-              <div key={category.title}>
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">
-                    {category.title}
-                  </p>
+              <div
+                key={category.title}
+                className="rounded-[10px] border border-[#2F3644] bg-[#171A21]"
+              >
+                <div className="flex items-center gap-1 pr-1">
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    aria-controls={bodyId}
+                    aria-label={`${category.title}, ${count} of ${fullCategory.rooms.length} selected`}
+                    disabled={searching}
+                    onClick={() =>
+                      setOpenGroups((current) => ({
+                        ...current,
+                        [category.title]: !current[category.title],
+                      }))
+                    }
+                    className="flex min-h-[40px] min-w-0 flex-1 items-center gap-2 rounded-[10px] px-3 text-left transition hover:bg-[#1F232C] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4F8CFF] disabled:cursor-default disabled:hover:bg-transparent"
+                  >
+                    <Chevron open={open} />
+                    <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">
+                      {category.title}
+                    </span>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        count > 0 ? "bg-[#4F8CFF]/20 text-[#9CC1FF]" : "bg-[#262B36] text-[#98A2B3]"
+                      }`}
+                    >
+                      {count} of {fullCategory.rooms.length}
+                    </span>
+                    {!open && picked.length > 0 ? (
+                      <span className="min-w-0 truncate text-xs text-[#98A2B3]">
+                        {picked.map(capitalize).join(", ")}
+                      </span>
+                    ) : null}
+                  </button>
                   <button
                     type="button"
                     aria-pressed={allSelected}
                     aria-label={`All ${category.title}`}
-                    onClick={() => toggleCategory(fullCategory ?? category)}
-                    className={`${LINK_BUTTON_CLASS} ${
+                    onClick={() => toggleCategory(fullCategory)}
+                    className={`${LINK_BUTTON_CLASS} shrink-0 ${
                       allSelected ? "text-[#9CC1FF]" : "text-[#6BA3FF] hover:text-[#9CC1FF]"
                     }`}
                   >
                     {allSelected ? "✓ All" : "All"}
                   </button>
                 </div>
-                <ChipGroup
-                  ariaLabel={category.title}
-                  options={category.rooms.map((room) => ({
-                    value: room,
-                    label: capitalize(room),
-                  }))}
-                  selectedValues={selectedRooms}
-                  onToggleValue={toggleRoom}
-                />
+                {open ? (
+                  <div id={bodyId} className="px-3 pb-3 pt-1">
+                    <ChipGroup
+                      ariaLabel={category.title}
+                      options={category.rooms.map((room) => ({
+                        value: room,
+                        label: capitalize(room),
+                      }))}
+                      selectedValues={selectedRooms}
+                      onToggleValue={toggleRoom}
+                    />
+                  </div>
+                ) : null}
               </div>
             );
           })}
