@@ -6,6 +6,7 @@ import type {
   RoomType,
 } from "@/lib/combinations";
 import { buildColorPaletteDirective, selectPalette } from "@/lib/promptBuilder/colorPalette";
+import { HOME_QUALITY_PROFILES } from "@/lib/promptBuilder/homeQuality";
 import { AUTO_WALL_COLOR_PALETTE } from "@/lib/wallColorPalette";
 
 const COLOR_MOOD_DIRECTION_MAP: Record<ColorMood, string> = {
@@ -172,6 +173,9 @@ export function buildPrompt(
   ceilingTypes: string[],
   ceilingLightTypes: string[]
 ) {
+  // Everything that depends on the quality tier comes from one profile (lib/promptBuilder/homeQuality.ts).
+  const quality = HOME_QUALITY_PROFILES[homeQuality];
+
   const colorMoodDirection =
     COLOR_MOOD_DIRECTION_MAP[colorMood] ?? COLOR_MOOD_DIRECTION_MAP["Warm Neutral"];
 
@@ -316,6 +320,16 @@ export function buildPrompt(
       ? `Feature one or more avant-garde focal points: ${focalPointTypes.join(", ")}. Make these elements daringly bold, conceptually interesting, and visually commanding. Prioritize artistic expression and experimental design over conventional aesthetics. These should provoke thought or challenge expectations.`
       : "Compose with subtle design elements and balanced spatial flow without one dominating focal point.";
 
+  // The avant-garde lines belong to the focal point rule, so they only appear when focal points are selected.
+  const focalPointStyleLines =
+    focalPointTypes.length > 0
+      ? `  - When focal points are selected: prioritize artistic impact, conceptual clarity, and avant-garde expression over comfort or conventionality
+  - Sculptural and experimental designer furniture, collectible art objects, unconventional materials
+  - Styling accessories: bold art pieces, conceptual sculptures, unconventional objects that challenge the eye
+  - Accessories should feel intentional, provocative, and culturally aware - pushing boundaries while maintaining cohesion
+`
+      : "";
+
   const windowDesignDirection =
     windowStyleTypes.length > 0
       ? windowStyleTypes.join(", ")
@@ -359,12 +373,12 @@ export function buildPrompt(
 - HDR photoreal rendering, physically accurate materials`
     : `- Bright natural daylight with an airy, sunlit interior feel and clean ambient bounce
 - Lifted midtones and soft shadow detail so corners read clearly without looking flat
-- Warm indirect cove lighting and layered practical fixtures to create an elegant luminous glow
+- ${quality.lighting}
 - Realistic high-key exposure with preserved highlight detail (no blown windows)
 - HDR photoreal rendering, physically accurate materials`;
   const cameraFinishLine = isMoodyLuxury
-    ? "premium real-estate editorial photography with balanced editorial lighting"
-    : "premium real-estate editorial photography with bright editorial lighting balance";
+    ? `${quality.photography} with balanced ${quality.lightingBalanceStyle}lighting`
+    : `${quality.photography} with bright ${quality.lightingBalanceStyle}lighting balance`;
   const darkWallRule = useLegacyNeutralGuardrails
     ? "Dark walls must be warm charcoal or soft near-black, not blue-heavy, not gray-green, and not muddy"
     : "Dark walls, when present, should read rich and true to the selected palette, never muddy or flat";
@@ -388,7 +402,7 @@ export function buildPrompt(
   const ceilingLightingDirection =
     ceilingLightTypes.length > 0
       ? ceilingLightTypes.join(", ")
-      : "concealed cove lighting";
+      : quality.defaultCeilingLighting;
 
   const accentPhrase =
     colorTier === "muted"
@@ -458,93 +472,25 @@ export function buildPrompt(
       ? "Keep the wall surface calm when the coverage setting is low, but let color coverage override wall neutrality when architectural surfaces are selected. Use layered whites, creams, taupes, wood, and stone rather than saturated wall paint unless coverage explicitly calls for stronger architectural color."
       : "Ensure tasteful palette variation through nuanced warm-neutral shifts, material contrast, and controlled accent detailing. Let color coverage determine whether walls stay neutral or carry palette color.";
 
-  const homeQualityDirections: Record<"builder's grade layout" | "everyday" | "upscale" | "luxury" | "ultra luxury", string> = {
-    "builder's grade layout":
-      "Standard tract-home planning with common room proportions, practical circulation, and straightforward spatial organization.",
-    everyday:
-      "Comfortable, practical, realistic materials and furniture; clean but approachable styling and moderate finishes.",
-    upscale:
-      "Higher-end finishes, refined detailing, curated furniture mix, elevated but still realistic residential quality.",
-    luxury:
-      "Premium finishes, bespoke detailing, designer furniture, polished composition, and clearly luxurious execution.",
-    "ultra luxury":
-      "Top-tier bespoke architecture and interiors, exceptional craftsmanship, museum-grade styling, and ultra-premium finishes.",
-  };
-
-  const homeQualityDirection = homeQualityDirections[homeQuality];
-
-  const qualityAtmosphere: Record<"builder's grade layout" | "everyday" | "upscale" | "luxury" | "ultra luxury", string> = {
-    "builder's grade layout":
-      "Simple, familiar, mass-market residential atmosphere without premium or bespoke architectural drama.",
-    everyday:
-      "Warm, functional, realistic everyday residential atmosphere with thoughtful but practical choices.",
-    upscale:
-      "Refined and elevated residential atmosphere with polished details and higher-end selections.",
-    luxury:
-      "Calm, refined, high-end atmosphere with premium finish quality and designer-level composition.",
-    "ultra luxury":
-      "Exceptionally refined, opulent, and impeccably crafted atmosphere with top-tier bespoke execution.",
-  };
-
-  const qualityMaterialDirection: Record<"builder's grade layout" | "everyday" | "upscale" | "luxury" | "ultra luxury", string> = {
-    "builder's grade layout":
-      "Builder-grade finishes: painted drywall, stock cabinetry, laminate or entry-level quartz counters, standard hardware, simple baseboards.",
-    everyday:
-      "Painted drywall, practical wood finishes, quartz or laminate surfaces, ceramic tile, matte black or brushed nickel hardware.",
-    upscale:
-      "Quality hardwood or engineered wood, quartz or selected stone, tailored millwork, premium textiles, mixed metal accents.",
-    luxury:
-      "Premium marble and stone accents, bespoke millwork, designer textiles, white oak or walnut, brushed brass details.",
-    "ultra luxury":
-      "Museum-grade stone slabs, custom artisan millwork, couture textiles, collectible furnishings, exceptional custom detailing.",
-  };
-
-  const qualityCameraDirection: Record<"builder's grade layout" | "everyday" | "upscale" | "luxury" | "ultra luxury", string> = {
-    "builder's grade layout":
-      "Straightforward real-estate framing with practical composition and no high-luxury editorial dramatization.",
-    everyday:
-      "Professional real-estate style framing, realistic proportions, natural lived-in feel.",
-    upscale:
-      "Editorial residential framing with refined composition and balanced detail emphasis.",
-    luxury:
-      "High-end design magazine framing with premium lighting and precise composition.",
-    "ultra luxury":
-      "Architectural Digest-level hero composition with dramatic yet elegant cinematic precision.",
-  };
-
-  const qualityNegativeDirection: Record<"builder's grade layout" | "everyday" | "upscale" | "luxury" | "ultra luxury", string> = {
-    "builder's grade layout":
-      "Avoid bespoke luxury detailing, palatial scale, exotic premium materials, and couture styling.",
-    everyday:
-      "Avoid opulent mansion cues, excessive marble, palatial detailing, or ultra-luxury staging.",
-    upscale:
-      "Avoid both bargain/basic look and excessive ultra-luxury opulence.",
-    luxury:
-      "Avoid cheap/basic finishes and avoid cartoonish excess.",
-    "ultra luxury":
-      "Avoid budget materials or generic catalog-level styling.",
-  };
-
   return `
 Ultra realistic ${style} ${room} with architecture and interior styling that clearly reflects this style.
 
 Design Direction:
-- Residential quality tier: ${homeQuality}; ${homeQualityDirection}
-- Atmosphere direction: ${qualityAtmosphere[homeQuality]}
+- Residential quality tier: ${homeQuality}; ${quality.direction}
+- Atmosphere direction: ${quality.atmosphere}
 - Style fidelity (critical): ${styleDirection}
 - Every major design decision must reinforce ${style} characteristics so this image reads unmistakably as ${style}
-- Bespoke millwork and seamless built-ins
-- Material direction: ${qualityMaterialDirection[homeQuality]}
+- Millwork direction: ${quality.millwork}
+- Material direction: ${quality.materials}
+- Room scale direction: ${quality.roomScale}
+- Trim and door direction: ${quality.trimAndDoors}
+- Furniture and styling direction: ${quality.furniture}
   - Focal point direction: ${focalPointDirection}
   - Focal point rule (critical): ${focalPointRule}
-  - When focal points are selected: prioritize artistic impact, conceptual clarity, and avant-garde expression over comfort or conventionality
-  - Sculptural and experimental designer furniture, collectible art objects, unconventional materials
-  - Styling accessories: bold art pieces, conceptual sculptures, unconventional objects that challenge the eye
-  - Accessories should feel intentional, provocative, and culturally aware - pushing boundaries while maintaining cohesion
-- Room size direction: ${roomSize}; architecture, furniture scale, circulation space, and camera composition should match this size faithfully
+${focalPointStyleLines}- Room size direction: ${roomSize}; architecture, furniture scale, circulation space, and camera composition should match this size faithfully
 - Wall color palette direction: ${wallColorPaletteDirection}
 - Color mood direction: ${colorMood}; ${colorMoodDirection}
-- Color rule priority (critical): Room Type > Color Strategy > Color Intensity (strength of color) > Color Coverage (where color appears) > Palette Family > Color Mood > Interior Style > Home Quality > Wall Type
+- Color rule priority (critical): Room Type > Color Strategy > Color Intensity (strength of color) > Color Coverage (where color appears) > Home Quality > Palette Family > Color Mood > Interior Style > Wall Type
 - Strategy precedence rule (critical): when strategy conflicts with mood, strategy wins.
 - Color intensity direction: ${normalizedColorIntensity}/100 (${colorIntensityLevel})
 - Color coverage direction: ${colorCoverage}; ${getCoverageDirective(colorCoverage, colorTier)}
@@ -564,17 +510,17 @@ Design Direction:
   - Accent color intensity rule (critical): ${accentIntensityRule}
 - Window design direction: ${windowDesignDirection}, balanced with wall area and aligned to the selected outside view
 - Window rule (critical): keep window-to-wall ratio consistent with the selected window style and avoid full glazing unless "floor-to-ceiling glazing walls" is selected
-- Ceiling treatment direction: ${ceilingDirection}, elegant and integrated with the lighting design
-- Ceiling lighting direction: ${ceilingLightingDirection}, refined and appropriate for luxury residential interiors
+- Ceiling treatment direction: ${ceilingDirection}, ${quality.ceilingSuffix}
+- Ceiling lighting direction: ${ceilingLightingDirection}, ${quality.ceilingLightingSuffix}
 - Color cast guardrail (critical): ${noGreenCastRule}
-- Perfect spatial balance, clean lines, no clutter
+- ${quality.staging}
 
 Lighting:
 ${lightingDirectionLines}
 
 Camera:
 - Wide interior composition, straight verticals, professional framing
-- Composition target: ${qualityCameraDirection[homeQuality]}
+- Composition target: ${quality.camera}
 - 8k detail, tack-sharp focus, ${cameraFinishLine}
 
 View:
@@ -582,12 +528,12 @@ View:
 - Maintain framing according to the selected window style
 
 Negative cues:
-- No cartoon look, no CGI plastic surfaces, no neon-like oversaturation, no distortion, no clutter
+- No cartoon look, no CGI plastic surfaces, no neon-like oversaturation, no distortion, ${quality.clutterNegative}
 - ${legacyNegativeCues}
 ${useLegacyNeutralGuardrails ? "- No green hue cast, green tint, teal cast, blue-green cast, or gray-green cast on walls, stone, plaster, millwork, or dominant artwork unless explicitly selected" : "- Avoid unintentional color casts; walls, stone, plaster, and millwork must remain true to the selected palette"}
 - ${darkWallRule}
 - Keep accent colors cohesive to the selected palette and color intensity target; avoid neon-like or chaotic oversaturation
 ${lowIntensityNegativeCue}- Avoid off-palette statement artwork; artwork tones must remain inside the selected palette
-- ${qualityNegativeDirection[homeQuality]}
+- ${quality.negative}
 `;
 }

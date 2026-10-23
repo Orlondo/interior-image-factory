@@ -35,11 +35,16 @@ const ROOM_TYPE_CATEGORIES = ROOM_CATEGORY_DEFINITIONS.map((category) => ({
 const QUICK_SETS = resolveQuickSets(rooms);
 
 const HOME_QUALITY_DESCRIPTIONS: Record<HomeQuality, string> = {
-  "builder's grade layout": "Standard tract-home layout with practical finishes and simpler detailing.",
-  everyday: "Practical, comfortable finishes and realistic residential styling.",
-  upscale: "Refined materials and polished details without full luxury opulence.",
-  luxury: "High-end finishes, designer furniture, and premium composition.",
-  "ultra luxury": "Top-tier bespoke interiors with exceptional materials and craftsmanship.",
+  "builder's grade layout":
+    "Plain, ordinary home: standard 8 ft ceilings, simple trim, stock cabinets, mass-market furniture, tidy and lived-in.",
+  everyday:
+    "Comfortable, practical home: simple trim, retail furniture, warm and lived-in rather than staged.",
+  upscale:
+    "Refined materials and tailored millwork, curated furniture, 9 ft ceilings, restrained styling.",
+  luxury:
+    "Premium stone and bespoke millwork, high ceilings, designer furniture, polished styling.",
+  "ultra luxury":
+    "Museum-grade custom joinery, collectible furnishings, grand scale, gallery-level styling.",
 };
 
 type RoomSectionProps = {
