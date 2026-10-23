@@ -33,6 +33,12 @@ import {
 import { submitImageBatchJob } from "@/lib/openaiBatch";
 import { buildPrompt } from "../../lib/promptBuilder";
 import {
+  FULL_ENUMERATION_LIMIT,
+  decodeIndex,
+  sampleDistinctIndices,
+  totalCombinations,
+} from "@/lib/scenarioSampling";
+import {
   getDefaultWallColorPalette,
   getWallColorRandomPool,
 } from "@/lib/wallColorPalette";
@@ -653,19 +659,43 @@ export async function POST(request: Request) {
 
     const seededRandom = createSeededRandom(hashStringToSeed(seedInput));
 
-    const scenariosByRoom: PromptScenario[][] = roomSelection.map((room) =>
-      viewSelection.flatMap((view) =>
-        colorProfileSelection.flatMap((colorProfile) =>
-          focalPointSelection.length > 0
-            ? focalPointSelection.flatMap((focalPoint) =>
-                windowSelection.flatMap((windowStyle) =>
+    const buildAllScenariosByRoom = (): PromptScenario[][] =>
+      roomSelection.map((room) =>
+        viewSelection.flatMap((view) =>
+          colorProfileSelection.flatMap((colorProfile) =>
+            focalPointSelection.length > 0
+              ? focalPointSelection.flatMap((focalPoint) =>
+                  windowSelection.flatMap((windowStyle) =>
+                    wallSelection.flatMap((wall) =>
+                      ceilingSelection.flatMap((ceiling) =>
+                        ceilingLightSelection.map((ceilingLight) => ({
+                          room,
+                          view,
+                          colorProfile,
+                          focalPoints: [focalPoint],
+                          windowStyle,
+                          wall,
+                          ceiling,
+                          ceilingLight,
+                          wallColorPalette: randomizeWallColor
+                            ? pickRandomItem(
+                                wallColorRandomPool,
+                                seededRandom
+                              )
+                            : wallColorPaletteSelection,
+                        }))
+                      )
+                    )
+                  )
+                )
+              : windowSelection.flatMap((windowStyle) =>
                   wallSelection.flatMap((wall) =>
                     ceilingSelection.flatMap((ceiling) =>
                       ceilingLightSelection.map((ceilingLight) => ({
                         room,
                         view,
                         colorProfile,
-                        focalPoints: [focalPoint],
+                        focalPoints: [],
                         windowStyle,
                         wall,
                         ceiling,
@@ -680,32 +710,55 @@ export async function POST(request: Request) {
                     )
                   )
                 )
-              )
-            : windowSelection.flatMap((windowStyle) =>
-                wallSelection.flatMap((wall) =>
-                  ceilingSelection.flatMap((ceiling) =>
-                    ceilingLightSelection.map((ceilingLight) => ({
-                      room,
-                      view,
-                      colorProfile,
-                      focalPoints: [],
-                      windowStyle,
-                      wall,
-                      ceiling,
-                      ceilingLight,
-                      wallColorPalette: randomizeWallColor
-                        ? pickRandomItem(
-                            wallColorRandomPool,
-                            seededRandom
-                          )
-                        : wallColorPaletteSelection,
-                    }))
-                  )
-                )
-              )
+          )
         )
-      )
-    );
+      );
+
+
+    const scenarioGroupSizes = [
+      roomSelection.length,
+      viewSelection.length,
+      colorProfileSelection.length,
+      focalPointSelection.length,
+      windowSelection.length,
+      wallSelection.length,
+      ceilingSelection.length,
+      ceilingLightSelection.length,
+    ];
+
+    // Small selections list every combination. Very large ones would use huge
+    // amounts of memory, so a random sample of `maxImages` is built directly.
+    const buildSampledScenarios = (): PromptScenario[] =>
+      sampleDistinctIndices(
+        totalCombinations(scenarioGroupSizes),
+        maxImages,
+        seededRandom
+      ).map((combinationIndex) => {
+        const [room, view, colorProfile, focalPoint, windowStyle, wall, ceiling, ceilingLight] =
+          decodeIndex(combinationIndex, scenarioGroupSizes);
+
+        return {
+          room: roomSelection[room ?? 0] as RoomType,
+          view: viewSelection[view ?? 0] as string,
+          colorProfile: colorProfileSelection[colorProfile ?? 0] as string,
+          focalPoints:
+            focalPointSelection.length > 0
+              ? [focalPointSelection[focalPoint ?? 0] as string]
+              : [],
+          windowStyle: windowSelection[windowStyle ?? 0] as string,
+          wall: wallSelection[wall ?? 0] as string,
+          ceiling: ceilingSelection[ceiling ?? 0] as string,
+          ceilingLight: ceilingLightSelection[ceilingLight ?? 0] as string,
+          wallColorPalette: randomizeWallColor
+            ? pickRandomItem(wallColorRandomPool, seededRandom)
+            : wallColorPaletteSelection,
+        };
+      });
+
+    const scenariosByRoom: PromptScenario[][] =
+      totalCombinations(scenarioGroupSizes) <= FULL_ENUMERATION_LIMIT
+        ? buildAllScenariosByRoom()
+        : [buildSampledScenarios()];
 
     const maxRoomPromptLength = scenariosByRoom.reduce(
       (maxLength, roomPrompts) => Math.max(maxLength, roomPrompts.length),
