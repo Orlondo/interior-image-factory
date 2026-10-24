@@ -1,10 +1,10 @@
 "use client";
 
 import { RoomTypePicker } from "@/components/ui-modernization";
-import { homeQualities, roomSizes, rooms, styles, type RoomType } from "@/lib/combinations";
+import { conditions, homeQualities, roomSizes, rooms, styles, type RoomType } from "@/lib/combinations";
 import { evenSplit } from "@/lib/roomMix";
 import { resolveQuickSets } from "@/lib/roomPicker";
-import type { HomeQuality, Setup } from "@/lib/setup";
+import type { Condition, HomeQuality, Setup } from "@/lib/setup";
 import { SelectField } from "./fields";
 import { RoomMix } from "./RoomMix";
 import { SectionCard } from "./SectionCard";
@@ -25,6 +25,10 @@ const ROOM_CATEGORY_DEFINITIONS: Array<{ title: string; rooms: string[] }> = [
   },
   { title: "Fitness Spaces", rooms: ["home gym"] },
   { title: "Utility Spaces", rooms: ["basement"] },
+  {
+    title: "Transitional Spaces",
+    rooms: ["hallway", "stairwell", "lobby", "waiting room", "empty office", "indoor pool"],
+  },
 ];
 
 const ROOM_TYPE_CATEGORIES = ROOM_CATEGORY_DEFINITIONS.map((category) => ({
@@ -45,6 +49,15 @@ const HOME_QUALITY_DESCRIPTIONS: Record<HomeQuality, string> = {
     "Premium stone and bespoke millwork, high ceilings, designer furniture, polished styling.",
   "ultra luxury":
     "Museum-grade custom joinery, collectible furnishings, grand scale, gallery-level styling.",
+};
+
+const CONDITION_DESCRIPTIONS: Record<Condition, string> = {
+  pristine: "Clean, intact and cared for. No wear is added.",
+  dated: "Clean but stuck decades ago: worn carpet, old fixtures, faded finishes.",
+  worn: "Used hard and never updated: scuffs, chips, sagging furniture, dull finishes.",
+  neglected: "Dust, grime, water stains, peeling paint, dim light. Fades the palette.",
+  abandoned: "Empty and rotting: damp, mold, debris, broken fixtures. Fades the palette.",
+  derelict: "Near ruin: collapsed ceilings, exposed structure, rot, plants coming in. Fades the palette.",
 };
 
 type RoomSectionProps = {
@@ -79,10 +92,10 @@ export function RoomSection({ setup, update, isOpen, onToggle }: RoomSectionProp
       icon="room"
       isOpen={isOpen}
       onToggle={onToggle}
-      summary={`${describeRooms(setup.rooms)} · ${setup.designStyle} · ${setup.homeQuality} · ${setup.roomSize}`}
+      summary={`${describeRooms(setup.rooms)} · ${setup.designStyle} · ${setup.homeQuality}${setup.condition === "pristine" ? "" : ` · ${setup.condition}`} · ${setup.roomSize}`}
     >
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
-        <div className="md:col-span-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+        <div className="md:col-span-2 lg:col-span-4">
           <RoomTypePicker
             selectedRooms={setup.rooms}
             roomTypeCategories={ROOM_TYPE_CATEGORIES}
@@ -91,7 +104,7 @@ export function RoomSection({ setup, update, isOpen, onToggle }: RoomSectionProp
           />
         </div>
 
-        <div className="md:col-span-3">
+        <div className="md:col-span-2 lg:col-span-4">
           <RoomMix setup={setup} update={update} />
         </div>
 
@@ -116,6 +129,19 @@ export function RoomSection({ setup, update, isOpen, onToggle }: RoomSectionProp
           {homeQualities.map((quality) => (
             <option key={quality} value={quality}>
               {quality}
+            </option>
+          ))}
+        </SelectField>
+
+        <SelectField
+          label="Condition"
+          value={setup.condition}
+          onChange={(condition) => update({ condition: condition as Condition })}
+          hint={CONDITION_DESCRIPTIONS[setup.condition]}
+        >
+          {conditions.map((condition) => (
+            <option key={condition} value={condition}>
+              {condition}
             </option>
           ))}
         </SelectField>

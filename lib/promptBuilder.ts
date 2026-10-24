@@ -7,6 +7,8 @@ import type {
 } from "@/lib/combinations";
 import { buildColorPaletteDirective, selectPalette } from "@/lib/promptBuilder/colorPalette";
 import { HOME_QUALITY_PROFILES } from "@/lib/promptBuilder/homeQuality";
+import { CONDITION_PROFILES, type ConditionKey } from "@/lib/promptBuilder/condition";
+import { STYLE_OVERRIDES } from "@/lib/promptBuilder/styleOverrides";
 import { AUTO_WALL_COLOR_PALETTE } from "@/lib/wallColorPalette";
 
 const COLOR_MOOD_DIRECTION_MAP: Record<ColorMood, string> = {
@@ -171,10 +173,14 @@ export function buildPrompt(
   focalPointTypes: string[],
   wallTypes: string[],
   ceilingTypes: string[],
-  ceilingLightTypes: string[]
+  ceilingLightTypes: string[],
+  condition: ConditionKey = "pristine"
 ) {
   // Everything that depends on the quality tier comes from one profile (lib/promptBuilder/homeQuality.ts).
   const quality = HOME_QUALITY_PROFILES[homeQuality];
+  const styleOverride = STYLE_OVERRIDES[style];
+  const cond = CONDITION_PROFILES[condition];
+  const isPristine = condition === "pristine";
 
   const colorMoodDirection =
     COLOR_MOOD_DIRECTION_MAP[colorMood] ?? COLOR_MOOD_DIRECTION_MAP["Warm Neutral"];
@@ -365,7 +371,11 @@ export function buildPrompt(
       : "Strictly honor the selected wall color palette. Let strategy and coverage decide when walls, millwork, and built-ins become color carriers.";
 
   const isMoodyLuxury = colorMood === "Moody Luxury";
-  const lightingDirectionLines = isMoodyLuxury
+  const lightingDirectionLines = styleOverride
+    ? styleOverride.lightingLines
+    : cond.lightingLines
+    ? cond.lightingLines
+    : isMoodyLuxury
     ? `- Soft overcast or late-afternoon daylight at the windows with a calm, enveloping interior feel
 - Rich, deeper midtones and gentle shadow falloff so dark finishes keep depth without crushing detail
 - Warm indirect cove lighting, backlit shelving, and layered practical fixtures create a glowing, intimate atmosphere
@@ -402,7 +412,7 @@ export function buildPrompt(
   const ceilingLightingDirection =
     ceilingLightTypes.length > 0
       ? ceilingLightTypes.join(", ")
-      : quality.defaultCeilingLighting;
+      : (styleOverride?.defaultCeilingLighting ?? cond.defaultCeilingLighting ?? quality.defaultCeilingLighting);
 
   const accentPhrase =
     colorTier === "muted"
@@ -449,7 +459,7 @@ export function buildPrompt(
     eclectic:
       "Curated mix of eras and styles, intentional contrast, expressive art and objects, cohesive yet personality-driven composition.",
     "liminal spaces":
-      "Transitional uncanny ambiance, sparse composition, atmospheric lighting, quiet emptiness, clean geometric corridors and thresholds, subtly surreal but realistic architectural mood.",
+      "Empty, transitional interior with no people and almost no decor: an uncanny stillness, as if the place was abandoned minutes ago. Long sightlines and repeating architectural geometry (doorways, thresholds, evenly spaced fixtures), plain dated finishes, and a faint sense of déjà vu. Realistic, not stylized.",
   };
 
   const styleDirection = tuneAccentPhrase(
@@ -472,25 +482,31 @@ export function buildPrompt(
       ? "Keep the wall surface calm when the coverage setting is low, but let color coverage override wall neutrality when architectural surfaces are selected. Use layered whites, creams, taupes, wood, and stone rather than saturated wall paint unless coverage explicitly calls for stronger architectural color."
       : "Ensure tasteful palette variation through nuanced warm-neutral shifts, material contrast, and controlled accent detailing. Let color coverage determine whether walls stay neutral or carry palette color.";
 
+  const conditionBlock = isPristine
+    ? ""
+    : `- Condition direction (critical): ${cond.direction}
+- Surface wear: ${cond.wear}
+${cond.colorRule ? `- Decay and color (critical): ${cond.colorRule}\n` : ""}`;
+
   return `
 Ultra realistic ${style} ${room} with architecture and interior styling that clearly reflects this style.
 
 Design Direction:
 - Residential quality tier: ${homeQuality}; ${quality.direction}
-- Atmosphere direction: ${quality.atmosphere}
-- Style fidelity (critical): ${styleDirection}
+- Atmosphere direction: ${styleOverride?.atmosphere ?? cond.atmosphere ?? quality.atmosphere}
+${conditionBlock}- Style fidelity (critical): ${styleDirection}
 - Every major design decision must reinforce ${style} characteristics so this image reads unmistakably as ${style}
 - Millwork direction: ${quality.millwork}
 - Material direction: ${quality.materials}
 - Room scale direction: ${quality.roomScale}
 - Trim and door direction: ${quality.trimAndDoors}
-- Furniture and styling direction: ${quality.furniture}
+- Furniture and styling direction: ${styleOverride?.furniture ?? cond.furniture ?? quality.furniture}
   - Focal point direction: ${focalPointDirection}
   - Focal point rule (critical): ${focalPointRule}
 ${focalPointStyleLines}- Room size direction: ${roomSize}; architecture, furniture scale, circulation space, and camera composition should match this size faithfully
 - Wall color palette direction: ${wallColorPaletteDirection}
 - Color mood direction: ${colorMood}; ${colorMoodDirection}
-- Color rule priority (critical): Room Type > Color Strategy > Color Intensity (strength of color) > Color Coverage (where color appears) > Home Quality > Palette Family > Color Mood > Interior Style > Wall Type
+- Color rule priority (critical): Room Type > ${cond.outranksColor ? "Condition > " : ""}Color Strategy > Color Intensity (strength of color) > Color Coverage (where color appears) > Home Quality > Palette Family > Color Mood > Interior Style > Wall Type
 - Strategy precedence rule (critical): when strategy conflicts with mood, strategy wins.
 - Color intensity direction: ${normalizedColorIntensity}/100 (${colorIntensityLevel})
 - Color coverage direction: ${colorCoverage}; ${getCoverageDirective(colorCoverage, colorTier)}
@@ -504,36 +520,36 @@ ${focalPointStyleLines}- Room size direction: ${roomSize}; architecture, furnitu
     colorProfileExecutionRule ||
     "Keep a balanced, tasteful, realistic color mix consistent with the selected palette."
   }
-  - ${useLegacyNeutralGuardrails ? "Prevent flat monotony by varying warm neutrals, wood tones, and stone textures across images while keeping palettes restrained and cohesive" : "Prevent flat monotony by varying tones, textures, and material layers across images while maintaining palette cohesion"}
+  - ${styleOverride ? styleOverride.sameness : cond.sameness ? cond.sameness : useLegacyNeutralGuardrails ? "Prevent flat monotony by varying warm neutrals, wood tones, and stone textures across images while keeping palettes restrained and cohesive" : "Prevent flat monotony by varying tones, textures, and material layers across images while maintaining palette cohesion"}
   - Hue guardrail (critical): ${hueGuardrailRule}
   - ${wallColorPaletteInstruction}
-  - Accent color intensity rule (critical): ${accentIntensityRule}
+  - Accent color intensity rule (critical): ${cond.accentRule ?? accentIntensityRule}
 - Window design direction: ${windowDesignDirection}, balanced with wall area and aligned to the selected outside view
 - Window rule (critical): keep window-to-wall ratio consistent with the selected window style and avoid full glazing unless "floor-to-ceiling glazing walls" is selected
-- Ceiling treatment direction: ${ceilingDirection}, ${quality.ceilingSuffix}
-- Ceiling lighting direction: ${ceilingLightingDirection}, ${quality.ceilingLightingSuffix}
+- Ceiling treatment direction: ${ceilingDirection}, ${cond.ceilingSuffix ?? quality.ceilingSuffix}
+- Ceiling lighting direction: ${ceilingLightingDirection}, ${cond.ceilingLightingSuffix ?? quality.ceilingLightingSuffix}
 - Color cast guardrail (critical): ${noGreenCastRule}
-- ${quality.staging}
+- ${styleOverride?.staging ?? (cond.staging || quality.staging)}
 
 Lighting:
 ${lightingDirectionLines}
 
 Camera:
 - Wide interior composition, straight verticals, professional framing
-- Composition target: ${quality.camera}
-- 8k detail, tack-sharp focus, ${cameraFinishLine}
+- Composition target: ${styleOverride?.composition ?? cond.composition ?? quality.camera}
+- ${styleOverride?.cameraLine ?? `8k detail, tack-sharp focus, ${cond.cameraLine ?? cameraFinishLine}`}
 
 View:
 - ${getViewDirectionDirective(view)}
 - Maintain framing according to the selected window style
 
 Negative cues:
-- No cartoon look, no CGI plastic surfaces, no neon-like oversaturation, no distortion, ${quality.clutterNegative}
+- No cartoon look, no CGI plastic surfaces, no neon-like oversaturation, no distortion, ${cond.clutterNegative || quality.clutterNegative}
 - ${legacyNegativeCues}
 ${useLegacyNeutralGuardrails ? "- No green hue cast, green tint, teal cast, blue-green cast, or gray-green cast on walls, stone, plaster, millwork, or dominant artwork unless explicitly selected" : "- Avoid unintentional color casts; walls, stone, plaster, and millwork must remain true to the selected palette"}
 - ${darkWallRule}
 - Keep accent colors cohesive to the selected palette and color intensity target; avoid neon-like or chaotic oversaturation
 ${lowIntensityNegativeCue}- Avoid off-palette statement artwork; artwork tones must remain inside the selected palette
-- ${quality.negative}
-`;
+- ${cond.negative ?? quality.negative}
+${styleOverride ? `- ${styleOverride.negative}\n` : ""}`;
 }

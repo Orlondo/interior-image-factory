@@ -10,6 +10,7 @@ import {
   colorMoods,
   colorProfiles,
   colorStrategies,
+  conditions,
   focalPoints,
   heroColors,
   homeQualities,
@@ -29,6 +30,7 @@ import type { RoomCounts } from "./roomMix";
 
 export type FileSizeOption = "small" | "medium" | "large";
 export type AspectRatioOption = "1:1" | "4:5" | "9:16" | "16:9";
+export type Condition = (typeof conditions)[number];
 export type HomeQuality =
   | "builder's grade layout"
   | "everyday"
@@ -55,6 +57,7 @@ export type Setup = {
   colorIntensity: number;
   autoPaletteVariation: boolean;
   homeQuality: HomeQuality;
+  condition: Condition;
   randomizeWallColor: boolean;
   fileSize: FileSizeOption;
   aspectRatio: AspectRatioOption;
@@ -88,6 +91,7 @@ export const DEFAULT_SETUP: Setup = {
   colorIntensity: COLOR_INTENSITY_DEFAULT,
   autoPaletteVariation: AUTO_PALETTE_VARIATION_DEFAULT,
   homeQuality: "upscale",
+  condition: "pristine",
   randomizeWallColor: false,
   fileSize: "small",
   aspectRatio: "16:9",
@@ -119,6 +123,8 @@ export function buildGeneratePayload(setup: Setup) {
     colorPresence: setup.colorIntensity,
     autoPaletteVariation: setup.autoPaletteVariation,
     homeQuality: setup.homeQuality,
+    // Only sent when set, so the default payload stays exactly what it was before Condition existed.
+    ...(setup.condition === "pristine" ? {} : { condition: setup.condition }),
     randomizeWallColor: setup.randomizeWallColor,
     fileSize: setup.fileSize,
     aspectRatio: setup.aspectRatio,
@@ -176,6 +182,7 @@ export function sanitizeSetup(raw: unknown): Setup {
         ? source.autoPaletteVariation
         : d.autoPaletteVariation,
     homeQuality: oneOf(source.homeQuality, homeQualities, d.homeQuality),
+    condition: oneOf(source.condition, conditions, d.condition),
     randomizeWallColor:
       typeof source.randomizeWallColor === "boolean"
         ? source.randomizeWallColor

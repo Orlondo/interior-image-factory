@@ -20,7 +20,13 @@ export type RoomType =
   | "pantry"
   | "mud room"
   | "walk-in closet"
-  | "laundry room";
+  | "laundry room"
+  | "hallway"
+  | "stairwell"
+  | "lobby"
+  | "waiting room"
+  | "empty office"
+  | "indoor pool";
 
 export const rooms: RoomType[] = [
   "living room",
@@ -45,6 +51,12 @@ export const rooms: RoomType[] = [
   "mud room",
   "walk-in closet",
   "laundry room",
+  "hallway",
+  "stairwell",
+  "lobby",
+  "waiting room",
+  "empty office",
+  "indoor pool",
 ];
 
 export const views = [
@@ -223,6 +235,8 @@ export const COLOR_INTENSITY_DEFAULT = 25;
 export const COLOR_PRESENCE_MIN = COLOR_INTENSITY_MIN;
 export const COLOR_PRESENCE_MAX = COLOR_INTENSITY_MAX;
 export const COLOR_PRESENCE_DEFAULT = COLOR_INTENSITY_DEFAULT;
+
+export { conditions } from "./promptBuilder/condition";
 
 export const homeQualities = [
   "builder's grade layout",

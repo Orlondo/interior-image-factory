@@ -13,6 +13,7 @@ import {
   colorStrategies,
   ceilingLights,
   ceilings,
+  conditions,
   type ColorMood,
   type ColorCoverage,
   type ColorStrategy,
@@ -29,6 +30,7 @@ import {
   walls,
   windowStyles,
 } from "@/lib/combinations";
+import type { Condition } from "@/lib/setup";
 import { submitImageBatchJob } from "@/lib/openaiBatch";
 import { buildPrompt } from "../../lib/promptBuilder";
 import {
@@ -92,6 +94,7 @@ type GeneratePayload = {
   heroColor?: string;
   autoPaletteVariation?: boolean;
   homeQuality?: HomeQuality;
+  condition?: Condition;
   wallColorPalette?: string;
   randomizeWallColor?: boolean;
   fileSize?: FileSizeOption;
@@ -222,6 +225,7 @@ function validateGeneratePayloadShape(payload: unknown): string[] {
     "colorCoverage",
     "heroColor",
     "homeQuality",
+    "condition",
     "wallColorPalette",
     "fileSize",
     "aspectRatio",
@@ -590,6 +594,9 @@ export async function POST(request: Request) {
         ? payload.homeQuality
         : "upscale";
 
+    const conditionSelection: Condition =
+      payload.condition && conditions.includes(payload.condition) ? payload.condition : "pristine";
+
     const wallColorPaletteSelection =
       typeof payload.wallColorPalette === "string" &&
       wallColorPalettes.includes(payload.wallColorPalette)
@@ -647,6 +654,8 @@ export async function POST(request: Request) {
       heroColorSelection,
       autoPaletteVariation,
       homeQualitySelection,
+      // Only when set, so seeds for existing pristine batches do not change.
+      ...(conditionSelection === "pristine" ? {} : { conditionSelection }),
       wallColorPaletteSelection,
       randomizeWallColor,
       randomRunSalt,
@@ -705,7 +714,8 @@ export async function POST(request: Request) {
         scenario.focalPoints,
         [scenario.wall],
         [scenario.ceiling],
-        [scenario.ceilingLight]
+        [scenario.ceilingLight],
+        conditionSelection
       );
 
       return `${prompt}\n\nVariation ${index + 1} of ${maxImages}.`;
@@ -714,6 +724,7 @@ export async function POST(request: Request) {
     const batchSettings = {
       designStyle: styleSelection,
       homeQuality: homeQualitySelection,
+      condition: conditionSelection,
       roomSize: roomSizeSelection,
       colorMood: colorMoodSelection,
       colorIntensity: colorIntensitySelection,

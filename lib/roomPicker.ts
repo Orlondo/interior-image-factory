@@ -39,6 +39,11 @@ export const QUICK_SETS: QuickSet[] = [
     label: "Entertaining",
     rooms: ["dining room", "theater room", "game room", "wine cellar"],
   },
+  {
+    id: "transitional",
+    label: "Transitional places",
+    rooms: ["hallway", "stairwell", "lobby", "waiting room", "empty office", "indoor pool"],
+  },
 ];
 
 /** Keeps only rooms that exist, and drops a set that ends up with fewer than two rooms. */
