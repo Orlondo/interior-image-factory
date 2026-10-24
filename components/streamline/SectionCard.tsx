@@ -60,7 +60,7 @@ export function SectionCard({
     <section
       ref={sectionRef}
       aria-labelledby={`${id}-heading`}
-      className="rounded-[20px] border border-l-[3px] border-[#262B36] bg-[#171A21]"
+      className="scroll-mt-28 rounded-[20px] border border-l-[3px] border-[#262B36] bg-[#171A21]"
       style={{ borderLeftColor: tint }}
     >
       <h2 id={`${id}-heading`} className="text-base font-semibold text-[#F5F7FA]">

@@ -9,7 +9,7 @@ import { LookSection } from "@/components/streamline/LookSection";
 import { OutputSection } from "@/components/streamline/OutputSection";
 import { RoomSection } from "@/components/streamline/RoomSection";
 import { SECONDARY_BUTTON_CLASS } from "@/components/streamline/fields";
-import { SetupsMenu } from "@/components/streamline/SetupsMenu";
+import { SetupsRow } from "@/components/streamline/SetupsRow";
 import { sumCounts } from "@/lib/roomMix";
 import { getLookValues } from "@/lib/looks";
 import {
@@ -73,15 +73,17 @@ export default function Home() {
   return (
     <>
       <AppHeader
+        secondRow={
+          <SetupsRow
+            savedSetups={savedSetups.items}
+            onSave={saveSetup}
+            onApply={applySetup}
+            onDelete={(id) => savedSetups.save(savedSetups.items.filter((item) => item.id !== id))}
+            onReset={() => setSetup(DEFAULT_SETUP)}
+          />
+        }
         actions={
           <>
-            <SetupsMenu
-              savedSetups={savedSetups.items}
-              onSave={saveSetup}
-              onApply={applySetup}
-              onDelete={(id) => savedSetups.save(savedSetups.items.filter((item) => item.id !== id))}
-              onReset={() => setSetup(DEFAULT_SETUP)}
-            />
             <button
               type="button"
               className={SECONDARY_BUTTON_CLASS}

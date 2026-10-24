@@ -278,3 +278,17 @@ This supersedes the "Saved setups collapse" bullet above.
 - **No Saved setups section.** There are four collapsible sections again (Room, Look, Details, Output), and Expand all and Collapse all cover those four. State saved while Saved setups was a section still loads; its `setups` value is ignored.
 - Buttons in the header are slightly smaller below 640 px so the title stays readable.
 - Test coverage: `tests/sections.test.ts`, and a browser run at 1200 px and 375 px (button in the header, panel inside the viewport, empty name rejected, save, count, apply, delete, persistence after reload, Escape and outside click, panel while scrolled, no page errors).
+
+## Update: Saved setups row in the pinned header
+
+Supersedes the header "Setups" button and panel.
+
+- Saved setups live in a second row of the sticky header, below the title and the Expand/Collapse buttons. It is a working control, not a single button.
+- Row contents: bookmark icon, "Setups" label (sm and up) with a count pill, a select of saved setups, an explicit **Apply** button (disabled until a setup is chosen), **Save current…**, and a **⋯** menu (Delete selected setup, Reset page to defaults).
+- Choosing a setup in the select does not change the page; only Apply does.
+- Save is inline: the row switches to a name field with Save and Cancel. Enter saves, Escape cancels. An empty name shows "Enter a name."
+- Status messages ("Setup applied.", saved, deleted) appear in a small `role="status"` pill below the row and clear after 3 seconds.
+- Phones (max-width 639px): the row hides when scrolling down and returns when scrolling up or near the top. It stays visible while a control inside it has focus. Desktop: always visible.
+- The header keeps a constant height. The hidden row slides up and fades (translate and opacity) and is `inert`, so the page never jumps and hidden controls cannot be tabbed to.
+- Below sm, the app icon is hidden and header button padding shrinks so the title fits at 375px.
+- Logic is in `lib/scrollDirection.ts` (`nextHidden`), `lib/useHideOnScroll.ts` and `lib/useMediaQuery.ts`; tests in `tests/scroll-direction.test.ts`.
