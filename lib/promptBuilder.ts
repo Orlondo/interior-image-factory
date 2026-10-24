@@ -22,6 +22,16 @@ const COLOR_MOOD_DIRECTION_MAP: Record<ColorMood, string> = {
     "Deeper tonal contrast and premium materials can support strategy-led palette direction in an editorial, luxurious mood.",
   "Coastal Neutral":
     "Relaxed coastal tonality can support strategy-led palette choices with bright, refined, material-forward execution.",
+  "Monochrome Tonal":
+    "Build the room from a single hue family in layered values: pale, mid, and deep tones of the same hue across walls, upholstery, textiles, and decor, with texture and material variation doing the work instead of contrasting colors. Keep accents to that hue family plus natural wood and one metal finish. Quiet, restrained, tone-on-tone, with no second competing hue.",
+  "Soft Pastel":
+    "Use high-value, low-saturation pastel tones such as powdery blush, mint, butter, lilac, and sky tints in a light, gentle palette. Keep every color pale and chalky, grounded by creamy off-white, and avoid deep, dark, or heavily saturated colors. Tender and airy, but still upscale and realistic.",
+  "Vivid Eclectic":
+    "Use saturated, confident, playful color: several vivid hues such as cobalt, tangerine, magenta, emerald, and saffron layered through furniture, rugs, art, and decor in a collected, eclectic way. Colors should read clearly saturated and intentional, balanced by a few calm neutrals so the room feels curated, not chaotic.",
+  "Cool Modern":
+    "Use crisp cool tonality: slate, steel, graphite, fog gray, and icy blue with clean white and cool metals. A clean-lined, precise, contemporary feel with cool daylight, minimal warm tones, and pale cool-toned wood.",
+  "Dark Earthy":
+    "Use deep, dim earth tones: espresso, umber, forest green, charcoal-olive, and aged leather under low, warm, glowing light. A rich, enclosed, grounded feel with deep midtones and soft shadow falloff that never turns muddy, in premium natural materials.",
 };
 
 function clampColorIntensity(colorIntensity: number): number {
@@ -370,7 +380,7 @@ export function buildPrompt(
       ? "Strictly honor the selected wall color palette. Keep dominant walls neutral-forward and avoid abrupt hue shifts unless coverage explicitly calls for architectural color."
       : "Strictly honor the selected wall color palette. Let strategy and coverage decide when walls, millwork, and built-ins become color carriers.";
 
-  const isMoodyLuxury = colorMood === "Moody Luxury";
+  const isMoodyLuxury = colorMood === "Moody Luxury" || colorMood === "Dark Earthy";
   const lightingDirectionLines = styleOverride
     ? styleOverride.lightingLines
     : cond.lightingLines

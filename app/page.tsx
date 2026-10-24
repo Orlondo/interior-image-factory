@@ -11,7 +11,7 @@ import { RoomSection } from "@/components/streamline/RoomSection";
 import { SECONDARY_BUTTON_CLASS } from "@/components/streamline/fields";
 import { SetupsRow } from "@/components/streamline/SetupsRow";
 import { sumCounts } from "@/lib/roomMix";
-import { getLookValues } from "@/lib/looks";
+import { getLookDetails, getLookValues } from "@/lib/looks";
 import {
   SAVED_LOOKS_KEY,
   SAVED_SETUPS_KEY,
@@ -44,10 +44,15 @@ export default function Home() {
     setup.rooms.length < 2 ||
     sumCounts(setup.rooms, setup.roomCounts) === setup.maxImages;
 
-  function saveLook(name: string): string | null {
+  function saveLook(name: string, includeDetails: boolean): string | null {
     const result = savedLooks.save([
       ...savedLooks.items,
-      { id: makeId(), name: cleanName(name), values: getLookValues(setup) },
+      {
+        id: makeId(),
+        name: cleanName(name),
+        values: getLookValues(setup),
+        ...(includeDetails ? { details: getLookDetails(setup) } : {}),
+      },
     ]);
 
     return result.ok ? null : result.message;

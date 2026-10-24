@@ -5,9 +5,12 @@ import { CollapsibleSection } from "@/components/ui-modernization";
 import { getColorPreviewData } from "@/lib/promptBuilder/colorPalette";
 import {
   BUILT_IN_LOOKS,
+  LOOK_GROUPS,
   findMatchingLook,
   getIntensityStep,
+  getLookDetails,
   type Look,
+  type LookDetails,
 } from "@/lib/looks";
 import { validateName, type SavedLook } from "@/lib/savedItems";
 import type { Setup } from "@/lib/setup";
@@ -22,7 +25,7 @@ type LookSectionProps = {
   update: (patch: Partial<Setup>) => void;
   savedLooks: SavedLook[];
   /** Returns an error message, or null when saved. */
-  onSaveLook: (name: string) => string | null;
+  onSaveLook: (name: string, includeDetails: boolean) => string | null;
   onDeleteLook: (id: string) => void;
   isOpen: boolean;
   onToggle: () => void;
@@ -43,6 +46,9 @@ export function LookSection({
 }: LookSectionProps) {
   const [newName, setNewName] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [includeDetails, setIncludeDetails] = useState(false);
+  // Details as they were before the last Look changed them, so the change can be undone.
+  const [previousDetails, setPreviousDetails] = useState<LookDetails | null>(null);
 
   const allLooks: Look[] = useMemo(
     () => [
@@ -52,6 +58,7 @@ export function LookSection({
         name: saved.name,
         description: "Your saved Look.",
         values: saved.values,
+        details: saved.details,
       })),
     ],
     [savedLooks]
@@ -87,7 +94,16 @@ export function LookSection({
   function applyLook(id: string) {
     const chosen = allLooks.find((look) => look.id === id);
 
-    if (chosen) {
+    if (!chosen) {
+      return;
+    }
+
+    if (chosen.details) {
+      setPreviousDetails(getLookDetails(setup));
+      update({ ...chosen.values, ...chosen.details });
+      setMessage("Look applied. Walls, ceilings and ceiling lights were set to match.");
+    } else {
+      setPreviousDetails(null);
       update({ ...chosen.values });
       setMessage(null);
     }
@@ -95,7 +111,7 @@ export function LookSection({
 
   function handleSave() {
     const taken = allLooks.map((look) => look.name);
-    const problem = validateName(newName, taken) ?? onSaveLook(newName);
+    const problem = validateName(newName, taken) ?? onSaveLook(newName, includeDetails);
 
     if (problem) {
       setMessage(problem);
@@ -103,6 +119,7 @@ export function LookSection({
     }
 
     setNewName("");
+    setPreviousDetails(null);
     setMessage("Look saved.");
   }
 
@@ -130,13 +147,19 @@ export function LookSection({
             value={activeLook?.id ?? CUSTOM_VALUE}
             onChange={(event) => applyLook(event.target.value)}
           >
-            <optgroup label="Built-in Looks">
-              {BUILT_IN_LOOKS.map((look) => (
-                <option key={look.id} value={look.id}>
-                  {look.name}
-                </option>
-              ))}
-            </optgroup>
+            {LOOK_GROUPS.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.ids.map((id) => {
+                  const look = BUILT_IN_LOOKS.find((candidate) => candidate.id === id);
+
+                  return look ? (
+                    <option key={look.id} value={look.id}>
+                      {look.name}
+                    </option>
+                  ) : null;
+                })}
+              </optgroup>
+            ))}
             {savedLooks.length > 0 ? (
               <optgroup label="Your Looks">
                 {savedLooks.map((saved) => (
@@ -213,6 +236,7 @@ export function LookSection({
             className={SECONDARY_BUTTON_CLASS}
             onClick={() => {
               onDeleteLook(savedId);
+              setPreviousDetails(null);
               setMessage("Look deleted. Your current colors are unchanged.");
             }}
           >
@@ -220,9 +244,34 @@ export function LookSection({
           </button>
         ) : null}
       </div>
+      <label className="mt-2 flex items-center gap-2 text-xs text-[#98A2B3]">
+        <input
+          type="checkbox"
+          checked={includeDetails}
+          onChange={(event) => setIncludeDetails(event.target.checked)}
+          className="h-4 w-4 accent-[#4F8CFF]"
+        />
+        Include walls, ceilings and ceiling lights when this Look is applied
+      </label>
       {message ? (
         <p role="status" className="mt-2 text-xs text-[#98A2B3]">
           {message}
+          {previousDetails ? (
+            <>
+              {" "}
+              <button
+                type="button"
+                className="font-medium text-[#4F8CFF] underline underline-offset-2"
+                onClick={() => {
+                  update({ ...previousDetails });
+                  setPreviousDetails(null);
+                  setMessage("Details restored. Your colors are unchanged.");
+                }}
+              >
+                Undo details
+              </button>
+            </>
+          ) : null}
         </p>
       ) : null}
     </SectionCard>

@@ -171,6 +171,11 @@ export const colorMoods = [
   "Light & Airy",
   "Moody Luxury",
   "Coastal Neutral",
+  "Monochrome Tonal",
+  "Soft Pastel",
+  "Vivid Eclectic",
+  "Cool Modern",
+  "Dark Earthy",
 ] as const;
 
 export type ColorMood = (typeof colorMoods)[number];
@@ -217,6 +222,11 @@ export const heroColors = [
   "Jewel Tone Mixed",
   "Warm Mixed",
   "Cool Mixed",
+  "Monochrome",
+  "Pastel Mixed",
+  "Vivid Mixed",
+  "Slate & Steel",
+  "Dark Earthy Mixed",
   ...singleHeroColors,
 ] as const;
 

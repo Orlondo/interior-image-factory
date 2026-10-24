@@ -384,6 +384,216 @@ const FAMILY_PALETTES: Record<HeroColor, readonly PaletteVariant[]> = {
       woodTone: "dark oak",
     },
   ],
+  "Monochrome": [
+    {
+      name: "Greige Tonal",
+      primary: "warm greige",
+      secondary: "soft taupe",
+      tertiary: "deep mushroom",
+      neutralBase: "pale oat",
+      metalAccent: "brushed nickel",
+      woodTone: "pale oak",
+      complementaryAccents: ["bone", "pale stone", "deep mushroom", "soft taupe"],
+    },
+    {
+      name: "Sage Tonal",
+      primary: "soft sage",
+      secondary: "mid green-gray",
+      tertiary: "deep moss-gray",
+      neutralBase: "pale celadon white",
+      metalAccent: "matte pewter",
+      woodTone: "pale ash",
+      complementaryAccents: ["pale celadon", "mid green-gray", "deep moss-gray", "bone"],
+    },
+    {
+      name: "Blue-Gray Tonal",
+      primary: "fog blue-gray",
+      secondary: "slate blue-gray",
+      tertiary: "deep ink-gray",
+      neutralBase: "pale mist",
+      metalAccent: "brushed steel",
+      woodTone: "bleached oak",
+      complementaryAccents: ["pale mist", "slate blue-gray", "deep ink-gray", "bone"],
+    },
+    {
+      name: "Warm Sand Tonal",
+      primary: "pale sand",
+      secondary: "camel-beige",
+      tertiary: "deep cocoa-beige",
+      neutralBase: "cream",
+      metalAccent: "soft champagne brass",
+      woodTone: "natural oak",
+      complementaryAccents: ["cream", "camel-beige", "deep cocoa-beige", "bone"],
+    },
+  ],
+  "Pastel Mixed": [
+    {
+      name: "Blush, Mint, Cream",
+      primary: "powdery blush",
+      secondary: "soft mint",
+      tertiary: "butter yellow",
+      neutralBase: "creamy off-white",
+      metalAccent: "pale champagne",
+      woodTone: "bleached oak",
+      complementaryAccents: ["butter yellow", "soft lilac", "pale sky blue", "cream"],
+    },
+    {
+      name: "Lilac, Sky, Ivory",
+      primary: "soft lilac",
+      secondary: "pale sky blue",
+      tertiary: "pale peach",
+      neutralBase: "ivory",
+      metalAccent: "pale brass",
+      woodTone: "light ash",
+      complementaryAccents: ["pale peach", "soft mint", "butter yellow", "ivory"],
+    },
+    {
+      name: "Butter, Sage, Shell",
+      primary: "butter yellow",
+      secondary: "pale sage",
+      tertiary: "shell pink",
+      neutralBase: "warm white",
+      metalAccent: "soft brass",
+      woodTone: "light oak",
+      complementaryAccents: ["shell pink", "powdery blue", "soft lilac", "warm white"],
+    },
+    {
+      name: "Peach, Powder Blue, Cream",
+      primary: "pale peach",
+      secondary: "powder blue",
+      tertiary: "soft mint",
+      neutralBase: "cream",
+      metalAccent: "brushed gold",
+      woodTone: "pale beech",
+      complementaryAccents: ["powder blue", "soft lilac", "butter yellow", "cream"],
+    },
+  ],
+  "Vivid Mixed": [
+    {
+      name: "Cobalt, Tangerine, Cream",
+      primary: "cobalt blue",
+      secondary: "tangerine",
+      tertiary: "saffron",
+      neutralBase: "warm white",
+      metalAccent: "polished brass",
+      woodTone: "walnut",
+      complementaryAccents: ["tangerine", "magenta", "emerald", "cream"],
+    },
+    {
+      name: "Magenta, Emerald, Ivory",
+      primary: "magenta",
+      secondary: "emerald",
+      tertiary: "saffron",
+      neutralBase: "ivory",
+      metalAccent: "antique brass",
+      woodTone: "dark walnut",
+      complementaryAccents: ["emerald", "cobalt blue", "tangerine", "ivory"],
+    },
+    {
+      name: "Saffron, Teal, Fuchsia",
+      primary: "saffron",
+      secondary: "vivid teal",
+      tertiary: "fuchsia",
+      neutralBase: "cream",
+      metalAccent: "gold",
+      woodTone: "natural teak",
+      complementaryAccents: ["fuchsia", "cobalt blue", "tangerine", "cream"],
+    },
+    {
+      name: "Poppy, Cobalt, Chartreuse",
+      primary: "poppy red",
+      secondary: "cobalt blue",
+      tertiary: "chartreuse",
+      neutralBase: "soft white",
+      metalAccent: "polished nickel",
+      woodTone: "white oak",
+      complementaryAccents: ["chartreuse", "magenta", "saffron", "soft white"],
+    },
+  ],
+  "Slate & Steel": [
+    {
+      name: "Slate, Fog, White",
+      primary: "slate gray",
+      secondary: "fog gray",
+      tertiary: "icy blue",
+      neutralBase: "clean white",
+      metalAccent: "brushed steel",
+      woodTone: "pale ash",
+      complementaryAccents: ["icy blue", "graphite", "pale silver", "white"],
+    },
+    {
+      name: "Graphite, Steel Blue, Pale Gray",
+      primary: "graphite",
+      secondary: "steel blue",
+      tertiary: "pale gray",
+      neutralBase: "cool white",
+      metalAccent: "polished chrome",
+      woodTone: "bleached oak",
+      complementaryAccents: ["steel blue", "icy blue", "pale silver", "white"],
+    },
+    {
+      name: "Charcoal, Ice, Silver",
+      primary: "charcoal",
+      secondary: "ice blue",
+      tertiary: "silver gray",
+      neutralBase: "crisp white",
+      metalAccent: "satin nickel",
+      woodTone: "light cool oak",
+      complementaryAccents: ["ice blue", "slate gray", "pale silver", "white"],
+    },
+    {
+      name: "Blue-Gray, Concrete, Cloud",
+      primary: "blue-gray",
+      secondary: "concrete gray",
+      tertiary: "cloud white",
+      neutralBase: "cool off-white",
+      metalAccent: "blackened steel",
+      woodTone: "pale cool oak",
+      complementaryAccents: ["concrete gray", "icy blue", "graphite", "white"],
+    },
+  ],
+  "Dark Earthy Mixed": [
+    {
+      name: "Espresso, Forest, Leather",
+      primary: "espresso brown",
+      secondary: "forest green",
+      tertiary: "aged leather tan",
+      neutralBase: "warm stone",
+      metalAccent: "aged bronze",
+      woodTone: "dark walnut",
+      complementaryAccents: ["aged leather tan", "charcoal-olive", "burnt umber", "warm stone"],
+    },
+    {
+      name: "Umber, Charcoal-Olive, Cognac",
+      primary: "burnt umber",
+      secondary: "charcoal-olive",
+      tertiary: "cognac",
+      neutralBase: "putty",
+      metalAccent: "dark bronze",
+      woodTone: "smoked oak",
+      complementaryAccents: ["cognac", "forest green", "espresso brown", "putty"],
+    },
+    {
+      name: "Deep Moss, Chocolate, Brass",
+      primary: "deep moss green",
+      secondary: "chocolate brown",
+      tertiary: "tobacco",
+      neutralBase: "warm taupe",
+      metalAccent: "antique brass",
+      woodTone: "dark oak",
+      complementaryAccents: ["tobacco", "burnt umber", "aged leather tan", "warm taupe"],
+    },
+    {
+      name: "Forest, Walnut, Rust",
+      primary: "forest green",
+      secondary: "dark walnut",
+      tertiary: "deep rust",
+      neutralBase: "oat and putty",
+      metalAccent: "aged brass",
+      woodTone: "dark walnut",
+      complementaryAccents: ["deep rust", "cognac", "charcoal-olive", "oat"],
+    },
+  ],
   "Deep Blue": [
     {
       name: "Deep Blue, Ivory, Walnut",
@@ -821,6 +1031,16 @@ function getMoodDefaultFamily(colorMood: ColorMood): HeroColor {
       return "Jewel Tone Mixed";
     case "Coastal Neutral":
       return "Cool Mixed";
+    case "Monochrome Tonal":
+      return "Monochrome";
+    case "Soft Pastel":
+      return "Pastel Mixed";
+    case "Vivid Eclectic":
+      return "Vivid Mixed";
+    case "Cool Modern":
+      return "Slate & Steel";
+    case "Dark Earthy":
+      return "Dark Earthy Mixed";
     default:
       return "Designer Mixed";
   }
@@ -980,6 +1200,10 @@ export function getHeroColorDirective(heroColor: HeroColor, palette: SelectedPal
 
   if ((singleHeroColors as readonly string[]).includes(family)) {
     return `Hero color ${family}: make ${palette.primary} the clear lead color and repeat it deliberately through artwork, textiles, furniture accents, decor, and architectural details so it reads as an intentional designer choice, supported by ${palette.secondary} and ${palette.neutralBase}.`;
+  }
+
+  if (family === "Monochrome") {
+    return `Palette family Monochrome: keep the whole room in one hue family, using ${palette.primary} as the lead tone with ${palette.secondary} and ${palette.tertiary} as lighter and deeper values of the same hue; vary texture and material, not hue.`;
   }
 
   return `Palette family ${family}: influence this variation with layered primary, secondary, complementary accent, and contrast tones without forcing a single-color room.`;

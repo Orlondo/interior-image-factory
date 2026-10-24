@@ -1,5 +1,5 @@
 import { sanitizeSetup, type Setup } from "./setup";
-import type { LookValues } from "./looks";
+import { sanitizeLookDetails, type LookDetails, type LookValues } from "./looks";
 import {
   colorCoverages,
   colorMoods,
@@ -15,7 +15,7 @@ export const SAVED_LOOKS_KEY = "iif.savedLooks.v1";
 export const SAVED_SETUPS_KEY = "iif.savedSetups.v1";
 export const MAX_NAME_LENGTH = 40;
 
-export type SavedLook = { id: string; name: string; values: LookValues };
+export type SavedLook = { id: string; name: string; values: LookValues; details?: LookDetails };
 export type SavedSetup = { id: string; name: string; setup: Setup };
 
 /** The small slice of the Storage API we use, so tests can pass a fake. */
@@ -77,8 +77,10 @@ export function parseSavedLooks(serialized: string | null): SavedLook[] {
     const e = entry as Record<string, unknown> | null;
     const values = sanitizeLookValues(e?.values);
 
+    const details = sanitizeLookDetails(e?.details);
+
     return typeof e?.id === "string" && typeof e.name === "string" && values
-      ? [{ id: e.id, name: cleanName(e.name), values }]
+      ? [{ id: e.id, name: cleanName(e.name), values, ...(details ? { details } : {}) }]
       : [];
   });
 }
