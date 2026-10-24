@@ -7,23 +7,25 @@ import {
   setAllSections,
 } from "../lib/sections";
 
-test("sections start with Room, Look and Output open and Details closed", () => {
+test("sections start with Room, Look, Output and Results open and Details closed", () => {
   assert.deepEqual(SECTION_DEFAULTS, {
     room: true,
     look: true,
     details: false,
     output: true,
+    results: true,
   });
   assert.deepEqual(parseSectionState(null), SECTION_DEFAULTS);
 });
 
 test("saved open/closed state is restored", () => {
-  const saved = JSON.stringify({ room: false, look: true, details: true, output: false });
+  const saved = JSON.stringify({ room: false, look: true, details: true, output: false, results: false });
   assert.deepEqual(parseSectionState(saved), {
     room: false,
     look: true,
     details: true,
     output: false,
+    results: false,
   });
 });
 
@@ -43,6 +45,7 @@ test("state saved while Saved setups was a section keeps the other sections and 
     look: false,
     details: true,
     output: true,
+    results: true,
   });
 });
 
@@ -52,11 +55,13 @@ test("expand all and collapse all set every section", () => {
     look: true,
     details: true,
     output: true,
+    results: true,
   });
   assert.deepEqual(setAllSections(false), {
     room: false,
     look: false,
     details: false,
     output: false,
+    results: false,
   });
 });

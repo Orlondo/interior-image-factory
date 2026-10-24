@@ -148,9 +148,14 @@ export default function Home() {
             onGenerate={() => generation.generate(setup)}
             onCancel={generation.cancelGeneration}
           />
-        </div>
 
-        <ImageReview images={generation.images} />
+          <ImageReview
+            images={generation.images}
+            aspectRatio={setup.aspectRatio}
+            isOpen={sections.state.results}
+            onToggle={() => sections.toggle("results")}
+          />
+        </div>
       </main>
     </>
   );

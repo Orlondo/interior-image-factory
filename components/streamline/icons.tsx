@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type SectionIconName = "setups" | "room" | "look" | "details" | "output" | "generate";
+export type SectionIconName = "setups" | "room" | "look" | "details" | "output" | "results" | "generate";
 
 const ICON_PATHS: Record<SectionIconName, ReactNode> = {
   setups: <path d="M6 3h12v18l-6-4-6 4z" />,
@@ -32,6 +32,14 @@ const ICON_PATHS: Record<SectionIconName, ReactNode> = {
       <rect x="3" y="4" width="18" height="16" rx="2" />
       <circle cx="9" cy="10" r="1.5" />
       <path d="M21 16l-5-5-8 8" />
+    </>
+  ),
+  results: (
+    <>
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
     </>
   ),
   generate: (

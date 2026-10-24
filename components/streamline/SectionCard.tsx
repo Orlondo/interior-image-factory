@@ -10,6 +10,7 @@ export const SECTION_TINTS: Record<SectionIconName, string> = {
   look: "#A08CD6",
   details: "#5FB3A8",
   output: "#8DB078",
+  results: "#C98BA5",
   generate: "#4F8CFF",
 };
 
@@ -23,6 +24,10 @@ type SectionCardProps = {
   onToggle?: () => void;
   /** One line shown beside the title while the section is collapsed. */
   summary?: string;
+  /** A small marker beside the title, such as "New". Shown whether the section is open or not. */
+  marker?: ReactNode;
+  /** Receives the section element, for sections that need to know whether they are on screen. */
+  sectionRef?: (element: HTMLElement | null) => void;
 };
 
 export function SectionCard({
@@ -33,6 +38,8 @@ export function SectionCard({
   isOpen = true,
   onToggle,
   summary,
+  marker,
+  sectionRef,
 }: SectionCardProps) {
   const tint = SECTION_TINTS[icon];
   const collapsible = typeof onToggle === "function";
@@ -51,6 +58,7 @@ export function SectionCard({
 
   return (
     <section
+      ref={sectionRef}
       aria-labelledby={`${id}-heading`}
       className="rounded-[20px] border border-l-[3px] border-[#262B36] bg-[#171A21]"
       style={{ borderLeftColor: tint }}
@@ -68,6 +76,7 @@ export function SectionCard({
           >
             {badge}
             <span className="shrink-0">{title}</span>
+            {marker}
             {!isOpen && summary ? (
               <span
                 id={summaryId}
@@ -86,6 +95,7 @@ export function SectionCard({
           <div className="flex items-center gap-3 px-4 py-4 sm:px-5">
             {badge}
             <span>{title}</span>
+            {marker}
           </div>
         )}
       </h2>
