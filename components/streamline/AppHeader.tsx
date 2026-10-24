@@ -15,7 +15,7 @@ export function AppHeader({ actions }: AppHeaderProps) {
         <div className="flex min-w-0 items-center gap-3">
           <span
             aria-hidden="true"
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[#4F8CFF]/15 text-[#4F8CFF]"
+            className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[#4F8CFF]/15 text-[#4F8CFF] sm:inline-flex"
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -28,7 +28,9 @@ export function AppHeader({ actions }: AppHeaderProps) {
             <span className="sm:hidden">Image Factory</span>
           </h1>
         </div>
-        {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+        {actions ? <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 [&_button]:px-1.5 [&_button]:text-xs sm:[&_button]:px-3 sm:[&_button]:text-sm">
+            {actions}
+          </div> : null}
       </div>
     </header>
   );

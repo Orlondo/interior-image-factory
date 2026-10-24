@@ -269,3 +269,12 @@ This supersedes FR-015, FR-017 and FR-018 above where they say Saved setups is n
 - **Saved setups collapse.** Saved setups is now the fifth collapsible section and starts closed, with a one-line summary ("none saved yet" or "3 saved"). Expand all and Collapse all include it. Open/closed state saved before this change still loads: the sections keep their state and Saved setups starts closed.
 - **Prompt Preview starts collapsed.** It still shows the coverage and intensity summary while closed, and opens on click.
 - Test coverage: `tests/sections.test.ts` (defaults, older saved state, expand/collapse all) and a browser run at 1200 px and 375 px (pinned header while scrolled, no clipped title or buttons, collapsed defaults, remembered state, no overflow).
+
+## Update: Saved setups moved to the header
+
+This supersedes the "Saved setups collapse" bullet above.
+
+- **Setups button in the pinned header.** A "Setups" button (with a count once you have saved some) opens a small panel: choose a saved setup and Apply or Delete it, name and save the current page, or reset the page. Apply and Reset close the panel; Escape or a click outside also closes it. On a phone the panel spans the screen width below the header.
+- **No Saved setups section.** There are four collapsible sections again (Room, Look, Details, Output), and Expand all and Collapse all cover those four. State saved while Saved setups was a section still loads; its `setups` value is ignored.
+- Buttons in the header are slightly smaller below 640 px so the title stays readable.
+- Test coverage: `tests/sections.test.ts`, and a browser run at 1200 px and 375 px (button in the header, panel inside the viewport, empty name rejected, save, count, apply, delete, persistence after reload, Escape and outside click, panel while scrolled, no page errors).

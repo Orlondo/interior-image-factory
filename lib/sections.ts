@@ -1,15 +1,14 @@
-export const SECTION_IDS = ["setups", "room", "look", "details", "output"] as const;
+export const SECTION_IDS = ["room", "look", "details", "output"] as const;
 export type SectionId = (typeof SECTION_IDS)[number];
 export type SectionState = Record<SectionId, boolean>;
 
 export const SECTIONS_KEY = "iif.sections.v1";
 
 /**
- * Room, Look and Output start open so defaults can be generated at once. Saved setups and Details
- * start closed: setups are used now and then, and Details is for fine tuning.
+ * Room, Look and Output start open so defaults can be generated at once. Details starts closed: it
+ * is for fine tuning. (Saved setups live in the header, not in a section.)
  */
 export const SECTION_DEFAULTS: SectionState = {
-  setups: false,
   room: true,
   look: true,
   details: false,
@@ -30,7 +29,6 @@ export function parseSectionState(serialized: string | null): SectionState {
     >;
 
     return {
-      setups: typeof source.setups === "boolean" ? source.setups : SECTION_DEFAULTS.setups,
       room: typeof source.room === "boolean" ? source.room : SECTION_DEFAULTS.room,
       look: typeof source.look === "boolean" ? source.look : SECTION_DEFAULTS.look,
       details: typeof source.details === "boolean" ? source.details : SECTION_DEFAULTS.details,
@@ -42,5 +40,5 @@ export function parseSectionState(serialized: string | null): SectionState {
 }
 
 export function setAllSections(open: boolean): SectionState {
-  return { setups: open, room: open, look: open, details: open, output: open };
+  return { room: open, look: open, details: open, output: open };
 }

@@ -9,7 +9,7 @@ import { LookSection } from "@/components/streamline/LookSection";
 import { OutputSection } from "@/components/streamline/OutputSection";
 import { RoomSection } from "@/components/streamline/RoomSection";
 import { SECONDARY_BUTTON_CLASS } from "@/components/streamline/fields";
-import { SetupsBar } from "@/components/streamline/SetupsBar";
+import { SetupsMenu } from "@/components/streamline/SetupsMenu";
 import { sumCounts } from "@/lib/roomMix";
 import { getLookValues } from "@/lib/looks";
 import {
@@ -75,6 +75,13 @@ export default function Home() {
       <AppHeader
         actions={
           <>
+            <SetupsMenu
+              savedSetups={savedSetups.items}
+              onSave={saveSetup}
+              onApply={applySetup}
+              onDelete={(id) => savedSetups.save(savedSetups.items.filter((item) => item.id !== id))}
+              onReset={() => setSetup(DEFAULT_SETUP)}
+            />
             <button
               type="button"
               className={SECONDARY_BUTTON_CLASS}
@@ -98,16 +105,6 @@ export default function Home() {
       />
       <main className="mx-auto w-full max-w-7xl overflow-x-hidden px-4 py-6 text-[#F5F7FA] sm:px-6 lg:px-10">
         <div className="space-y-4">
-          <SetupsBar
-            savedSetups={savedSetups.items}
-            onSave={saveSetup}
-            onApply={applySetup}
-            onDelete={(id) => savedSetups.save(savedSetups.items.filter((item) => item.id !== id))}
-            onReset={() => setSetup(DEFAULT_SETUP)}
-            isOpen={sections.state.setups}
-            onToggle={() => sections.toggle("setups")}
-          />
-
           <RoomSection
             setup={setup}
             update={update}

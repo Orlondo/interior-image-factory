@@ -7,9 +7,8 @@ import {
   setAllSections,
 } from "../lib/sections";
 
-test("sections start with Room, Look and Output open; Saved setups and Details closed", () => {
+test("sections start with Room, Look and Output open and Details closed", () => {
   assert.deepEqual(SECTION_DEFAULTS, {
-    setups: false,
     room: true,
     look: true,
     details: false,
@@ -19,9 +18,8 @@ test("sections start with Room, Look and Output open; Saved setups and Details c
 });
 
 test("saved open/closed state is restored", () => {
-  const saved = JSON.stringify({ setups: true, room: false, look: true, details: true, output: false });
+  const saved = JSON.stringify({ room: false, look: true, details: true, output: false });
   assert.deepEqual(parseSectionState(saved), {
-    setups: true,
     room: false,
     look: true,
     details: true,
@@ -38,10 +36,9 @@ test("malformed or partial saved state falls back to defaults per section", () =
   });
 });
 
-test("state saved before Saved setups became collapsible keeps its sections and closes setups", () => {
-  const older = JSON.stringify({ room: false, look: false, details: true, output: true });
+test("state saved while Saved setups was a section keeps the other sections and ignores setups", () => {
+  const older = JSON.stringify({ setups: true, room: false, look: false, details: true, output: true });
   assert.deepEqual(parseSectionState(older), {
-    setups: false,
     room: false,
     look: false,
     details: true,
@@ -51,14 +48,12 @@ test("state saved before Saved setups became collapsible keeps its sections and 
 
 test("expand all and collapse all set every section", () => {
   assert.deepEqual(setAllSections(true), {
-    setups: true,
     room: true,
     look: true,
     details: true,
     output: true,
   });
   assert.deepEqual(setAllSections(false), {
-    setups: false,
     room: false,
     look: false,
     details: false,
