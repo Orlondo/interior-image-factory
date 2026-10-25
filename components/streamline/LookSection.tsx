@@ -10,11 +10,11 @@ import {
   getIntensityStep,
   getLookDetails,
   type Look,
-  type LookDetails,
 } from "@/lib/looks";
 import { validateName, type SavedLook } from "@/lib/savedItems";
 import type { Setup } from "@/lib/setup";
 import { CustomizeColors } from "./CustomizeColors";
+import { DetailsChangePanel, type DetailsChange } from "./DetailsChangePanel";
 import { SECONDARY_BUTTON_CLASS, SELECT_CLASS } from "./fields";
 import { SectionCard } from "./SectionCard";
 
@@ -47,8 +47,8 @@ export function LookSection({
   const [newName, setNewName] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [includeDetails, setIncludeDetails] = useState(false);
-  // Details as they were before the last Look changed them, so the change can be undone.
-  const [previousDetails, setPreviousDetails] = useState<LookDetails | null>(null);
+  // What the last Look did to Details (shown in a panel, and used to undo it).
+  const [detailsChange, setDetailsChange] = useState<DetailsChange | null>(null);
 
   const allLooks: Look[] = useMemo(
     () => [
@@ -99,11 +99,11 @@ export function LookSection({
     }
 
     if (chosen.details) {
-      setPreviousDetails(getLookDetails(setup));
+      setDetailsChange({ lookName: chosen.name, before: getLookDetails(setup), after: chosen.details });
       update({ ...chosen.values, ...chosen.details });
-      setMessage("Look applied. Walls, ceilings and ceiling lights were set to match.");
+      setMessage(null);
     } else {
-      setPreviousDetails(null);
+      setDetailsChange(null);
       update({ ...chosen.values });
       setMessage(null);
     }
@@ -119,7 +119,7 @@ export function LookSection({
     }
 
     setNewName("");
-    setPreviousDetails(null);
+    setDetailsChange(null);
     setMessage("Look saved.");
   }
 
@@ -204,6 +204,18 @@ export function LookSection({
         </div>
       </div>
 
+      {detailsChange ? (
+        <DetailsChangePanel
+          change={detailsChange}
+          onUndo={() => {
+            update({ ...detailsChange.before });
+            setDetailsChange(null);
+            setMessage("Details restored. Your colors are unchanged.");
+          }}
+          onDismiss={() => setDetailsChange(null)}
+        />
+      ) : null}
+
       <div className="mt-4">
         <CollapsibleSection
           title="Customize colors"
@@ -236,7 +248,7 @@ export function LookSection({
             className={SECONDARY_BUTTON_CLASS}
             onClick={() => {
               onDeleteLook(savedId);
-              setPreviousDetails(null);
+              setDetailsChange(null);
               setMessage("Look deleted. Your current colors are unchanged.");
             }}
           >
@@ -256,22 +268,6 @@ export function LookSection({
       {message ? (
         <p role="status" className="mt-2 text-xs text-[#98A2B3]">
           {message}
-          {previousDetails ? (
-            <>
-              {" "}
-              <button
-                type="button"
-                className="font-medium text-[#4F8CFF] underline underline-offset-2"
-                onClick={() => {
-                  update({ ...previousDetails });
-                  setPreviousDetails(null);
-                  setMessage("Details restored. Your colors are unchanged.");
-                }}
-              >
-                Undo details
-              </button>
-            </>
-          ) : null}
         </p>
       ) : null}
     </SectionCard>

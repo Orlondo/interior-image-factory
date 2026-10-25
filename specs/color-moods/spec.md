@@ -31,8 +31,16 @@ Five mixed families added to `heroColors`: Monochrome, Pastel Mixed, Vivid Mixed
 ## Update: Looks also set walls, ceilings and ceiling lights
 
 - Every built-in Look carries `details` (wall type, ceiling type, ceiling lights). Choosing a Look sets those three Details fields along with the colors. Window style, focal points and outside view are never changed by a Look.
-- Choosing a Look replaces the current picks in those three fields. The confirmation line under the picker says so and offers **Undo details**, which restores the previous picks and leaves the colors alone. Undo goes away after saving or deleting a Look.
+- Choosing a Look replaces the current picks in those three fields.
 - Designer Layered carries today's defaults, so switching back to it restores them.
 - Saved Looks: a checkbox, "Include walls, ceilings and ceiling lights when this Look is applied" (off by default), stores the current picks with the Look. Older saved Looks have no details and behave as before. Stored details are validated on load; invalid ones are dropped.
 - Whether a Look is "active" is still decided by the six color fields only, so details never make a Look show as Custom.
 - Tests: `tests/look-details.test.ts`.
+
+## Update: Details change panel
+
+- When a Look with details is chosen, a panel under the Look picker lists what happened, one row per field: "Wall type: old picks → new picks". A field that did not change reads "no change (current picks)". If nothing changed, the panel says the details already matched.
+- Before values show every pick (multi-select included); order of picks is ignored when deciding whether a field changed (`describeDetailChanges`).
+- Buttons: **Undo details** (restores the previous picks, colors untouched; hidden when nothing changed) and **Dismiss**. The panel is `role="status"` so screen readers announce it.
+- The panel stays until dismissed, undone, or replaced by choosing another Look. Choosing a Look without details, saving a Look, or deleting a Look clears it.
+- Component: `components/streamline/DetailsChangePanel.tsx`. Tests: `tests/look-details.test.ts`.

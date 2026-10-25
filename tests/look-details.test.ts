@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ceilingLights, ceilings, walls } from "../lib/combinations";
-import { BUILT_IN_LOOKS, DEFAULT_LOOK_ID, getLookDetails, getLookValues, sanitizeLookDetails } from "../lib/looks";
+import { BUILT_IN_LOOKS, DEFAULT_LOOK_ID, getLookDetails, describeDetailChanges, getLookValues, sanitizeLookDetails } from "../lib/looks";
 import { parseSavedLooks, writeList, type SavedLook } from "../lib/savedItems";
 import { DEFAULT_SETUP } from "../lib/setup";
 
@@ -59,4 +59,16 @@ test("saved Looks keep their details; older saved Looks without details still lo
 
   const broken = JSON.stringify([{ ...withDetails, details: { walls: ["nope"] } }]);
   assert.deepEqual(parseSavedLooks(broken), [{ id: "a", name: "With details", values: withDetails.values }]);
+});
+
+test("describeDetailChanges reports each field before and after, ignoring pick order", () => {
+  const before = { walls: ["wallpaper walls", "stone walls"], ceilings: ["smooth white ceiling"], ceilingLights: ["recessed downlights"] };
+  const after = { walls: ["stone walls", "wallpaper walls"], ceilings: ["coffered ceiling"], ceilingLights: ["recessed downlights"] };
+  const rows = describeDetailChanges(before, after);
+
+  assert.deepEqual(rows.map((row) => row.label), ["Wall type", "Ceiling type", "Ceiling lights"]);
+  assert.deepEqual(rows.map((row) => row.changed), [false, true, false]);
+  assert.deepEqual(rows[1].before, ["smooth white ceiling"]);
+  assert.deepEqual(rows[1].after, ["coffered ceiling"]);
+  assert.ok(describeDetailChanges(after, after).every((row) => !row.changed));
 });

@@ -237,3 +237,32 @@ export function lookMatches(values: LookValues, setup: Setup): boolean {
 export function findMatchingLook(setup: Setup, looks: Look[]): Look | null {
   return looks.find((candidate) => lookMatches(candidate.values, setup)) ?? null;
 }
+
+export type DetailChange = {
+  key: keyof LookDetails;
+  label: string;
+  before: string[];
+  after: string[];
+  changed: boolean;
+};
+
+const DETAIL_LABELS: Record<keyof LookDetails, string> = {
+  walls: "Wall type",
+  ceilings: "Ceiling type",
+  ceilingLights: "Ceiling lights",
+};
+
+function sameOptions(a: string[], b: string[]): boolean {
+  return a.length === b.length && [...a].sort().join("|") === [...b].sort().join("|");
+}
+
+/** One row per detail field, saying what it was and what it is now (order of picks is ignored). */
+export function describeDetailChanges(before: LookDetails, after: LookDetails): DetailChange[] {
+  return (Object.keys(DETAIL_LABELS) as (keyof LookDetails)[]).map((key) => ({
+    key,
+    label: DETAIL_LABELS[key],
+    before: before[key],
+    after: after[key],
+    changed: !sameOptions(before[key], after[key]),
+  }));
+}
