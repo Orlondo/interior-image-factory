@@ -247,6 +247,7 @@ export const COLOR_PRESENCE_MAX = COLOR_INTENSITY_MAX;
 export const COLOR_PRESENCE_DEFAULT = COLOR_INTENSITY_DEFAULT;
 
 export { conditions } from "./promptBuilder/condition";
+export { cameras } from "./promptBuilder/camera";
 
 export const homeQualities = [
   "builder's grade layout",

@@ -14,6 +14,7 @@ import {
   ceilingLights,
   ceilings,
   conditions,
+  cameras,
   type ColorMood,
   type ColorCoverage,
   type ColorStrategy,
@@ -30,7 +31,7 @@ import {
   walls,
   windowStyles,
 } from "@/lib/combinations";
-import type { Condition } from "@/lib/setup";
+import type { Camera, Condition } from "@/lib/setup";
 import { submitImageBatchJob } from "@/lib/openaiBatch";
 import { buildPrompt } from "../../lib/promptBuilder";
 import {
@@ -95,6 +96,7 @@ type GeneratePayload = {
   autoPaletteVariation?: boolean;
   homeQuality?: HomeQuality;
   condition?: Condition;
+  camera?: Camera;
   wallColorPalette?: string;
   randomizeWallColor?: boolean;
   fileSize?: FileSizeOption;
@@ -226,6 +228,7 @@ function validateGeneratePayloadShape(payload: unknown): string[] {
     "heroColor",
     "homeQuality",
     "condition",
+    "camera",
     "wallColorPalette",
     "fileSize",
     "aspectRatio",
@@ -597,6 +600,9 @@ export async function POST(request: Request) {
     const conditionSelection: Condition =
       payload.condition && conditions.includes(payload.condition) ? payload.condition : "pristine";
 
+    const cameraSelection: Camera =
+      payload.camera && cameras.includes(payload.camera) ? payload.camera : "standard";
+
     const wallColorPaletteSelection =
       typeof payload.wallColorPalette === "string" &&
       wallColorPalettes.includes(payload.wallColorPalette)
@@ -656,6 +662,7 @@ export async function POST(request: Request) {
       homeQualitySelection,
       // Only when set, so seeds for existing pristine batches do not change.
       ...(conditionSelection === "pristine" ? {} : { conditionSelection }),
+      ...(cameraSelection === "standard" ? {} : { cameraSelection }),
       wallColorPaletteSelection,
       randomizeWallColor,
       randomRunSalt,
@@ -715,7 +722,9 @@ export async function POST(request: Request) {
         [scenario.wall],
         [scenario.ceiling],
         [scenario.ceilingLight],
-        conditionSelection
+        conditionSelection,
+        cameraSelection,
+        index
       );
 
       return `${prompt}\n\nVariation ${index + 1} of ${maxImages}.`;
@@ -725,6 +734,7 @@ export async function POST(request: Request) {
       designStyle: styleSelection,
       homeQuality: homeQualitySelection,
       condition: conditionSelection,
+      camera: cameraSelection,
       roomSize: roomSizeSelection,
       colorMood: colorMoodSelection,
       colorIntensity: colorIntensitySelection,

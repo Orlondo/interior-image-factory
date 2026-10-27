@@ -7,6 +7,7 @@ import type {
 } from "@/lib/combinations";
 import { buildColorPaletteDirective, selectPalette } from "@/lib/promptBuilder/colorPalette";
 import { HOME_QUALITY_PROFILES } from "@/lib/promptBuilder/homeQuality";
+import { CAMERA_MODES, cameraAngleFor, type CameraKey } from "@/lib/promptBuilder/camera";
 import { CONDITION_PROFILES, type ConditionKey } from "@/lib/promptBuilder/condition";
 import { STYLE_OVERRIDES } from "@/lib/promptBuilder/styleOverrides";
 import { AUTO_WALL_COLOR_PALETTE } from "@/lib/wallColorPalette";
@@ -184,13 +185,18 @@ export function buildPrompt(
   wallTypes: string[],
   ceilingTypes: string[],
   ceilingLightTypes: string[],
-  condition: ConditionKey = "pristine"
+  condition: ConditionKey = "pristine",
+  camera: CameraKey = "standard",
+  /** This image's place in the batch. A dramatic or cinematic camera uses it to give each image its own angle. */
+  cameraIndex = 0
 ) {
   // Everything that depends on the quality tier comes from one profile (lib/promptBuilder/homeQuality.ts).
   const quality = HOME_QUALITY_PROFILES[homeQuality];
   const styleOverride = STYLE_OVERRIDES[style];
   const cond = CONDITION_PROFILES[condition];
   const isPristine = condition === "pristine";
+  const cameraMode = camera === "standard" ? null : CAMERA_MODES[camera];
+  const dramatic = cameraMode ? cameraAngleFor(camera as "dramatic" | "cinematic", cameraIndex) : null;
 
   const colorMoodDirection =
     COLOR_MOOD_DIRECTION_MAP[colorMood] ?? COLOR_MOOD_DIRECTION_MAP["Warm Neutral"];
@@ -545,16 +551,21 @@ Lighting:
 ${lightingDirectionLines}
 
 Camera:
-- Wide interior composition, straight verticals, professional framing
-- Composition target: ${styleOverride?.composition ?? cond.composition ?? quality.camera}
-- ${styleOverride?.cameraLine ?? `8k detail, tack-sharp focus, ${cond.cameraLine ?? cameraFinishLine}`}
+${
+  dramatic
+    ? `- Camera angle (critical): ${dramatic.direction}
+- ${cameraMode?.lens}
+`
+    : "- Wide interior composition, straight verticals, professional framing\n"
+}- Composition target: ${styleOverride?.composition ?? cond.composition ?? quality.camera}${dramatic ? `; emphasis on ${dramatic.composition}` : ""}
+- ${styleOverride?.cameraLine ?? cameraMode?.finish ?? `8k detail, tack-sharp focus, ${cond.cameraLine ?? cameraFinishLine}`}
 
 View:
 - ${getViewDirectionDirective(view)}
 - Maintain framing according to the selected window style
 
 Negative cues:
-- No cartoon look, no CGI plastic surfaces, no neon-like oversaturation, no distortion, ${cond.clutterNegative || quality.clutterNegative}
+- No cartoon look, no CGI plastic surfaces, no neon-like oversaturation, ${cameraMode ? cameraMode.negative : "no distortion"}, ${cond.clutterNegative || quality.clutterNegative}
 - ${legacyNegativeCues}
 ${useLegacyNeutralGuardrails ? "- No green hue cast, green tint, teal cast, blue-green cast, or gray-green cast on walls, stone, plaster, millwork, or dominant artwork unless explicitly selected" : "- Avoid unintentional color casts; walls, stone, plaster, and millwork must remain true to the selected palette"}
 - ${darkWallRule}

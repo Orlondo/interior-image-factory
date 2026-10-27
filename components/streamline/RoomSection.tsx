@@ -1,10 +1,10 @@
 "use client";
 
 import { RoomTypePicker } from "@/components/ui-modernization";
-import { conditions, homeQualities, roomSizes, rooms, styles, type RoomType } from "@/lib/combinations";
+import { cameras, conditions, homeQualities, roomSizes, rooms, styles, type RoomType } from "@/lib/combinations";
 import { evenSplit } from "@/lib/roomMix";
 import { resolveQuickSets } from "@/lib/roomPicker";
-import type { Condition, HomeQuality, Setup } from "@/lib/setup";
+import type { Camera, Condition, HomeQuality, Setup } from "@/lib/setup";
 import { SelectField } from "./fields";
 import { RoomMix } from "./RoomMix";
 import { SectionCard } from "./SectionCard";
@@ -60,6 +60,14 @@ const CONDITION_DESCRIPTIONS: Record<Condition, string> = {
   derelict: "Near ruin: collapsed ceilings, exposed structure, rot, plants coming in. Fades the palette.",
 };
 
+const CAMERA_DESCRIPTIONS: Record<Camera, string> = {
+  standard: "A wide, level, straight-verticals view of the room.",
+  dramatic:
+    "Every image gets its own bold angle: low, high corner, deep one-point, tight corner, doorway, low close view. Rooms stay real, with no fisheye.",
+  cinematic:
+    "Every image gets its own film-style camera position: establishing, low hero, symmetrical, through a doorway, facing the window, high wide. Only the angle changes.",
+};
+
 type RoomSectionProps = {
   setup: Setup;
   update: (patch: Partial<Setup>) => void;
@@ -92,7 +100,7 @@ export function RoomSection({ setup, update, isOpen, onToggle }: RoomSectionProp
       icon="room"
       isOpen={isOpen}
       onToggle={onToggle}
-      summary={`${describeRooms(setup.rooms)} · ${setup.designStyle} · ${setup.homeQuality}${setup.condition === "pristine" ? "" : ` · ${setup.condition}`} · ${setup.roomSize}`}
+      summary={`${describeRooms(setup.rooms)} · ${setup.designStyle} · ${setup.homeQuality}${setup.condition === "pristine" ? "" : ` · ${setup.condition}`} · ${setup.roomSize}${setup.camera === "standard" ? "" : ` · ${setup.camera} angles`}`}
     >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 lg:gap-5">
         <div className="md:col-span-2 lg:col-span-4">
@@ -142,6 +150,19 @@ export function RoomSection({ setup, update, isOpen, onToggle }: RoomSectionProp
           {conditions.map((condition) => (
             <option key={condition} value={condition}>
               {condition}
+            </option>
+          ))}
+        </SelectField>
+
+        <SelectField
+          label="Camera"
+          value={setup.camera}
+          onChange={(camera) => update({ camera: camera as Camera })}
+          hint={CAMERA_DESCRIPTIONS[setup.camera]}
+        >
+          {cameras.map((camera) => (
+            <option key={camera} value={camera}>
+              {camera}
             </option>
           ))}
         </SelectField>

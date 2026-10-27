@@ -6,6 +6,7 @@ import {
   HERO_COLOR_DEFAULT,
   ceilingLights,
   ceilings,
+  cameras,
   colorCoverages,
   colorMoods,
   colorProfiles,
@@ -31,6 +32,7 @@ import type { RoomCounts } from "./roomMix";
 export type FileSizeOption = "small" | "medium" | "large";
 export type AspectRatioOption = "1:1" | "4:5" | "9:16" | "16:9";
 export type Condition = (typeof conditions)[number];
+export type Camera = (typeof cameras)[number];
 export type HomeQuality =
   | "builder's grade layout"
   | "everyday"
@@ -58,6 +60,8 @@ export type Setup = {
   autoPaletteVariation: boolean;
   homeQuality: HomeQuality;
   condition: Condition;
+  /** "dramatic" or "cinematic" gives every image its own angle; "standard" is the usual wide, level shot. */
+  camera: Camera;
   randomizeWallColor: boolean;
   fileSize: FileSizeOption;
   aspectRatio: AspectRatioOption;
@@ -92,6 +96,7 @@ export const DEFAULT_SETUP: Setup = {
   autoPaletteVariation: AUTO_PALETTE_VARIATION_DEFAULT,
   homeQuality: "upscale",
   condition: "pristine",
+  camera: "standard",
   randomizeWallColor: false,
   fileSize: "small",
   aspectRatio: "16:9",
@@ -125,6 +130,8 @@ export function buildGeneratePayload(setup: Setup) {
     homeQuality: setup.homeQuality,
     // Only sent when set, so the default payload stays exactly what it was before Condition existed.
     ...(setup.condition === "pristine" ? {} : { condition: setup.condition }),
+    // Only sent when set, so the default payload stays exactly what it was before Camera existed.
+    ...(setup.camera === "standard" ? {} : { camera: setup.camera }),
     randomizeWallColor: setup.randomizeWallColor,
     fileSize: setup.fileSize,
     aspectRatio: setup.aspectRatio,
@@ -183,6 +190,7 @@ export function sanitizeSetup(raw: unknown): Setup {
         : d.autoPaletteVariation,
     homeQuality: oneOf(source.homeQuality, homeQualities, d.homeQuality),
     condition: oneOf(source.condition, conditions, d.condition),
+    camera: oneOf(source.camera, cameras, d.camera),
     randomizeWallColor:
       typeof source.randomizeWallColor === "boolean"
         ? source.randomizeWallColor

@@ -67,7 +67,7 @@ export function GenerationPanel({
       <SummaryCard
         title="Generation Summary"
         lines={[
-          `${setup.designStyle} ${setup.homeQuality}${setup.condition === "pristine" ? "" : ` ${setup.condition}`} ${setup.rooms[0] ?? "living room"}`,
+          `${setup.designStyle} ${setup.homeQuality}${setup.condition === "pristine" ? "" : ` ${setup.condition}`} ${setup.rooms[0] ?? "living room"}${setup.camera === "standard" ? "" : `, ${setup.camera} angles`}`,
           `${setup.aspectRatio} ${setup.aspectRatio === "16:9" ? "landscape" : "format"}`,
           setup.rooms.length >= 2
             ? `${setup.maxImages} images: ${describeSplit(

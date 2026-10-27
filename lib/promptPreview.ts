@@ -27,7 +27,9 @@ export function buildPromptPreview(setup: Setup): string {
     setup.walls.slice(0, 1),
     setup.ceilings.slice(0, 1),
     setup.ceilingLights.slice(0, 1),
-    setup.condition
+    setup.condition,
+    setup.camera,
+    0
   );
 }
 
