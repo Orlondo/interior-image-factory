@@ -16,6 +16,8 @@ export type PromptScenario = {
   ceiling: string;
   ceilingLight: string;
   wallColorPalette: string;
+  /** Set when the image is one angle of a room set (see lib/roomSets.ts). */
+  set?: { number: number; angle: number; size: number };
 };
 
 export type ScenarioPlanInput = {

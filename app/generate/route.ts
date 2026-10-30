@@ -39,7 +39,17 @@ import {
   writeCompletedBatch,
   writePendingManifest,
 } from "@/lib/batchManifest";
-import { buildScenarioPlan } from "@/lib/scenarioPlan";
+import { buildScenarioPlan, type PromptScenario } from "@/lib/scenarioPlan";
+import { cameraAngleFor } from "@/lib/promptBuilder/camera";
+import {
+  MAX_ANGLES,
+  liveLimitMessage,
+  planRoomSets,
+  planRuns,
+  runReferenceItems,
+  usesRoomSets,
+} from "@/lib/roomSets";
+import { sameHousePrompt, sameRoomPrompt, setAngleDirection } from "@/lib/setPrompts";
 import {
   countsInOrder,
   evenSplit,
@@ -103,6 +113,10 @@ type GeneratePayload = {
   aspectRatio?: AspectRatioOption;
   maxImages?: number;
   roomCounts?: unknown;
+  /** Images of one room made as angles of the same room (1 = every image is its own room). */
+  anglesPerRoom?: number;
+  /** Rooms made to look like one house. */
+  sameHouse?: boolean;
 };
 
 const FILE_SIZE_TO_QUALITY: Record<FileSizeOption, "low" | "medium" | "high"> = {
@@ -273,6 +287,25 @@ function validateGeneratePayloadShape(payload: unknown): string[] {
   }
 
   if (
+    "anglesPerRoom" in input &&
+    input.anglesPerRoom !== undefined &&
+    (typeof input.anglesPerRoom !== "number" ||
+      !Number.isInteger(input.anglesPerRoom) ||
+      input.anglesPerRoom < 1 ||
+      input.anglesPerRoom > MAX_ANGLES)
+  ) {
+    errors.push(`anglesPerRoom must be a whole number from 1 to ${MAX_ANGLES}.`);
+  }
+
+  if (
+    "sameHouse" in input &&
+    input.sameHouse !== undefined &&
+    typeof input.sameHouse !== "boolean"
+  ) {
+    errors.push("sameHouse must be a boolean.");
+  }
+
+  if (
     "maxImages" in input &&
     input.maxImages !== undefined &&
     (!Number.isInteger(input.maxImages) || typeof input.maxImages !== "number")
@@ -316,12 +349,12 @@ function createSeededRandom(seed: number): () => number {
   };
 }
 
-async function generateWithRateLimitRetry(input: {
-  model: string;
-  prompt: string;
-  quality: "low" | "medium" | "high";
-  size: `${number}x${number}` | "1024x1024" | "1536x1024" | "1024x1536";
-}): Promise<ImagesResponse> {
+type ImageRequest = { body: BodyInit; headers: Record<string, string> };
+
+async function sendImageRequest(
+  endpoint: "generations" | "edits",
+  build: () => ImageRequest
+): Promise<ImagesResponse> {
   for (let attempt = 0; attempt <= MAX_RATE_LIMIT_RETRIES; attempt += 1) {
     try {
       const apiKey = process.env.OPENAI_API_KEY;
@@ -334,13 +367,15 @@ async function generateWithRateLimitRetry(input: {
         throw error;
       }
 
-      const response = await fetch("https://api.openai.com/v1/images/generations", {
+      // Built again for every attempt, because a form body cannot be sent twice.
+      const request = build();
+      const response = await fetch(`https://api.openai.com/v1/images/${endpoint}`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          ...request.headers,
           Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify(input),
+        body: request.body,
       });
 
       const responseBody = await response.text();
@@ -383,6 +418,42 @@ async function generateWithRateLimitRetry(input: {
   throw new Error("Image generation failed after rate-limit retries");
 }
 
+async function generateWithRateLimitRetry(input: {
+  model: string;
+  prompt: string;
+  quality: "low" | "medium" | "high";
+  size: `${number}x${number}` | "1024x1024" | "1536x1024" | "1024x1536";
+}): Promise<ImagesResponse> {
+  return sendImageRequest("generations", () => ({
+    body: JSON.stringify(input),
+    headers: { "Content-Type": "application/json" },
+  }));
+}
+
+/** Makes a new image from a reference image and a prompt (the edits endpoint). */
+async function editWithRateLimitRetry(input: {
+  model: string;
+  prompt: string;
+  quality: "low" | "medium" | "high";
+  size: string;
+  referenceB64: string;
+}): Promise<ImagesResponse> {
+  return sendImageRequest("edits", () => {
+    const form = new FormData();
+    form.append("model", input.model);
+    form.append("prompt", input.prompt);
+    form.append("quality", input.quality);
+    form.append("size", input.size);
+    form.append(
+      "image[]",
+      new Blob([Buffer.from(input.referenceB64, "base64")], { type: "image/png" }),
+      "reference.png"
+    );
+
+    return { body: form, headers: {} };
+  });
+}
+
 async function generateImageWithFallback(
   prompt: string,
   quality: "low" | "medium" | "high",
@@ -409,6 +480,51 @@ async function generateImageWithFallback(
       prompt,
       quality,
       size: fallbackSize,
+    });
+  }
+}
+
+/**
+ * Which color variation an image in a set uses: the images of one room share one, and in a house
+ * every room shares the house's, so the palette stays the same across the angles and rooms.
+ */
+function paletteIndexFor(index: number, scenario: PromptScenario, sameHouse: boolean): number {
+  return sameHouse ? 0 : index - (scenario.set?.angle ?? 0);
+}
+
+async function editImageWithFallback(
+  prompt: string,
+  referenceB64: string,
+  quality: "low" | "medium" | "high",
+  size: `${number}x${number}`,
+  fallbackSize: "1024x1024" | "1536x1024" | "1024x1536"
+): Promise<ImagesResponse> {
+  try {
+    return await editWithRateLimitRetry({
+      model: PRIMARY_IMAGE_MODEL,
+      prompt,
+      quality,
+      size,
+      referenceB64,
+    });
+  } catch (error) {
+    const message = extractErrorMessage(error).toLowerCase();
+    // A rejected request (400/404) may be the newer model not taking a reference image or one of its
+    // settings, so the older model is tried before giving up.
+    const status = (error as { status?: number }).status;
+    const shouldFallback =
+      message.includes("model") || message.includes("size") || status === 400 || status === 404;
+
+    if (!shouldFallback) {
+      throw error;
+    }
+
+    return editWithRateLimitRetry({
+      model: FALLBACK_IMAGE_MODEL,
+      prompt,
+      quality,
+      size: fallbackSize,
+      referenceB64,
     });
   }
 }
@@ -638,6 +754,19 @@ export async function POST(request: Request) {
         ? evenSplit(roomSelection, maxImages)
         : (payload.roomCounts as RoomCounts);
 
+    const anglesPerRoom =
+      typeof payload.anglesPerRoom === "number" ? payload.anglesPerRoom : 1;
+    const sameHouse = payload.sameHouse === true;
+    const useSets = usesRoomSets(anglesPerRoom, sameHouse);
+    const limitMessage = liveLimitMessage(maxImages, anglesPerRoom, sameHouse);
+
+    if (limitMessage) {
+      return NextResponse.json(
+        { error: "Invalid request payload", details: [limitMessage] },
+        { status: 400 }
+      );
+    }
+
     const quality = FILE_SIZE_TO_QUALITY[fileSize];
     const size = FILE_SIZE_AND_ASPECT_TO_SIZE[fileSize][aspectRatio];
     const fallbackSize = FALLBACK_ASPECT_RATIO_TO_SIZE[aspectRatio];
@@ -669,13 +798,20 @@ export async function POST(request: Request) {
       fileSize,
       aspectRatio,
       roomCounts: payload.roomCounts ?? null,
+      // Only when set, so seeds for ordinary batches do not change.
+      ...(anglesPerRoom > 1 ? { anglesPerRoom } : {}),
+      ...(sameHouse ? { sameHouse } : {}),
     });
 
     const seededRandom = createSeededRandom(hashStringToSeed(seedInput));
 
-    const scenarios = buildScenarioPlan({
+    const roomSets = useSets ? planRoomSets(roomSelection, roomCountsByRoom, anglesPerRoom) : [];
+    const planned = buildScenarioPlan({
       rooms: roomSelection,
-      counts: countsInOrder(roomSelection, roomCountsByRoom),
+      // With sets, one scenario is chosen for each set; its images are then angles of that scenario.
+      counts: useSets
+        ? roomSelection.map((room) => roomSets.filter((set) => set.room === room).length)
+        : countsInOrder(roomSelection, roomCountsByRoom),
       views: viewSelection,
       colorProfiles: colorProfileSelection,
       focalPoints: focalPointSelection,
@@ -689,6 +825,35 @@ export async function POST(request: Request) {
           ? pickRandomItem(wallColorRandomPool, seededRandom)
           : wallColorPaletteSelection,
     });
+
+    const scenarios: PromptScenario[] = [];
+
+    if (useSets) {
+      // The planner mixes the rooms together; hand the scenarios back out room by room, in set order.
+      const queues = new Map<string, PromptScenario[]>();
+      planned.forEach((scenario) => queues.set(scenario.room, [...(queues.get(scenario.room) ?? []), scenario]));
+      let house: PromptScenario | null = null;
+
+      for (const set of roomSets) {
+        const own = queues.get(set.room)?.shift();
+
+        if (!own) {
+          throw new Error("Unable to select a scenario for a room set");
+        }
+
+        // In one house everything but the room itself is shared with the house's first room.
+        house = house ?? own;
+        const chosen: PromptScenario = sameHouse
+          ? { ...house, room: set.room as RoomType, focalPoints: own.focalPoints }
+          : own;
+
+        for (let angle = 0; angle < set.size; angle += 1) {
+          scenarios.push({ ...chosen, set: { number: set.number, angle, size: set.size } });
+        }
+      }
+    } else {
+      scenarios.push(...planned);
+    }
 
     if (scenarios.length === 0) {
       throw new Error("No prompts could be generated from the selected options");
@@ -711,7 +876,7 @@ export async function POST(request: Request) {
         colorCoverageSelection,
         heroColorSelection,
         autoPaletteVariation,
-        autoPaletteVariation ? index : 0,
+        autoPaletteVariation ? (scenario.set ? paletteIndexFor(index, scenario, sameHouse) : index) : 0,
         maxImages,
         homeQualitySelection,
         scenario.wallColorPalette,
@@ -724,7 +889,7 @@ export async function POST(request: Request) {
         [scenario.ceilingLight],
         conditionSelection,
         cameraSelection,
-        index
+        scenario.set ? scenario.set.angle : index
       );
 
       return `${prompt}\n\nVariation ${index + 1} of ${maxImages}.`;
@@ -745,6 +910,9 @@ export async function POST(request: Request) {
       fileSize,
       quality,
       size,
+      // Only when set, so the details saved for ordinary batches do not change.
+      ...(anglesPerRoom > 1 ? { anglesPerRoom } : {}),
+      ...(sameHouse ? { sameHouse } : {}),
     };
 
     if (maxImages > BATCH_MODE_THRESHOLD) {
@@ -784,15 +952,57 @@ export async function POST(request: Request) {
 
     const results: ImagesResponse[] = [];
 
-    for (let i = 0; i < prompts.length; i += CONCURRENCY) {
-      const batch = prompts.slice(i, i + CONCURRENCY);
-      const batchResults = await Promise.all(
-        batch.map((prompt) =>
-          generateImageWithFallback(prompt, quality, size, fallbackSize)
-        )
+    if (useSets) {
+      const items = planRuns(roomSets, sameHouse);
+      const made = await runReferenceItems(
+        items,
+        async (item, reference) => {
+          const scenario = scenarios[item.index] as PromptScenario;
+          const roomPrompt = prompts[item.index] as string;
+          let response: ImagesResponse;
+
+          if (reference === null) {
+            // The set's first image, or one whose reference never came back: made from the prompt alone.
+            response = await generateImageWithFallback(roomPrompt, quality, size, fallbackSize);
+          } else if (item.kind === "angle") {
+            const direction =
+              cameraSelection === "standard"
+                ? setAngleDirection(item.angle)
+                : cameraAngleFor(cameraSelection, item.angle).direction;
+            response = await editImageWithFallback(
+              sameRoomPrompt(scenario.room, direction),
+              reference,
+              quality,
+              size,
+              fallbackSize
+            );
+          } else {
+            response = await editImageWithFallback(
+              sameHousePrompt(scenario.room, roomPrompt),
+              reference,
+              quality,
+              size,
+              fallbackSize
+            );
+          }
+
+          return response.data?.find((image) => image.b64_json)?.b64_json ?? null;
+        },
+        CONCURRENCY
       );
 
-      results.push(...batchResults);
+      results.push(...made.map((b64): ImagesResponse => ({ data: b64 ? [{ b64_json: b64 }] : [] })));
+    } else {
+      for (let i = 0; i < prompts.length; i += CONCURRENCY) {
+        const batch = prompts.slice(i, i + CONCURRENCY);
+        const batchResults = await Promise.all(
+          batch.map((prompt) =>
+            generateImageWithFallback(prompt, quality, size, fallbackSize)
+          )
+        );
+
+        results.push(...batchResults);
+      }
     }
 
     const savedImages = results.flatMap((result, resultIndex) => {

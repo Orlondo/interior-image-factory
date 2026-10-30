@@ -11,6 +11,7 @@ import { RoomSection } from "@/components/streamline/RoomSection";
 import { SECONDARY_BUTTON_CLASS } from "@/components/streamline/fields";
 import { SetupsRow } from "@/components/streamline/SetupsRow";
 import { sumCounts } from "@/lib/roomMix";
+import { liveLimitMessage } from "@/lib/roomSets";
 import { getLookDetails, getLookValues } from "@/lib/looks";
 import {
   SAVED_LOOKS_KEY,
@@ -40,9 +41,10 @@ export default function Home() {
   }, []);
 
   const canGenerate =
-    setup.roomSplitMode !== "custom" ||
-    setup.rooms.length < 2 ||
-    sumCounts(setup.rooms, setup.roomCounts) === setup.maxImages;
+    (setup.roomSplitMode !== "custom" ||
+      setup.rooms.length < 2 ||
+      sumCounts(setup.rooms, setup.roomCounts) === setup.maxImages) &&
+    liveLimitMessage(setup.maxImages, setup.anglesPerRoom, setup.sameHouse) === null;
 
   function saveLook(name: string, includeDetails: boolean): string | null {
     const result = savedLooks.save([

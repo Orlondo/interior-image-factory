@@ -24,6 +24,8 @@ export type BatchImageEntry = {
   ceiling: string;
   ceilingLight: string;
   wallColorPalette: string;
+  /** Set only for room angles: which room set (1-based), which angle of it (0 = the first), and its size. */
+  set?: { number: number; angle: number; size: number };
 };
 
 export type BatchManifest = {
@@ -90,6 +92,7 @@ export function buildPendingManifest(input: {
       ceiling: scenario.ceiling,
       ceilingLight: scenario.ceilingLight,
       wallColorPalette: scenario.wallColorPalette,
+      ...(scenario.set ? { set: scenario.set } : {}),
     })),
   };
 }

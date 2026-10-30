@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:color-system": "tsx --test tests/color-system.test.ts",
-    "test:streamline": "tsx --test tests/streamline.test.ts tests/scenario-sampling.test.ts tests/sections.test.ts tests/room-mix.test.ts tests/batch-manifest.test.ts tests/room-picker.test.ts tests/home-quality.test.ts tests/style-overrides.test.ts tests/condition.test.ts tests/camera.test.ts tests/color-moods.test.ts tests/look-details.test.ts tests/review-layout.test.ts tests/scroll-direction.test.ts"
+    "test:streamline": "tsx --test tests/streamline.test.ts tests/scenario-sampling.test.ts tests/sections.test.ts tests/room-mix.test.ts tests/batch-manifest.test.ts tests/room-picker.test.ts tests/home-quality.test.ts tests/style-overrides.test.ts tests/condition.test.ts tests/camera.test.ts tests/color-moods.test.ts tests/look-details.test.ts tests/review-layout.test.ts tests/scroll-direction.test.ts tests/room-sets.test.ts"
   },
   "dependencies": {
     "next": "^16.2.6",

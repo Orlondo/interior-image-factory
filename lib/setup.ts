@@ -28,6 +28,7 @@ import {
   type RoomType,
 } from "./combinations";
 import type { RoomCounts } from "./roomMix";
+import { MAX_ANGLES } from "./roomSets";
 
 export type FileSizeOption = "small" | "medium" | "large";
 export type AspectRatioOption = "1:1" | "4:5" | "9:16" | "16:9";
@@ -69,6 +70,10 @@ export type Setup = {
   /** "even" splits images equally across rooms; "custom" uses `roomCounts`. */
   roomSplitMode: RoomSplitMode;
   roomCounts: RoomCounts;
+  /** Images of the same room shown from different angles (1 = every image is its own room). */
+  anglesPerRoom: number;
+  /** Rooms made to look like one house: shared style, palette and finishes. */
+  sameHouse: boolean;
 };
 
 export type RoomSplitMode = "even" | "custom";
@@ -103,6 +108,8 @@ export const DEFAULT_SETUP: Setup = {
   maxImages: 12,
   roomSplitMode: "even",
   roomCounts: {},
+  anglesPerRoom: 1,
+  sameHouse: false,
 };
 
 /** The exact request body the page has always sent to /generate. */
@@ -137,6 +144,9 @@ export function buildGeneratePayload(setup: Setup) {
     aspectRatio: setup.aspectRatio,
     maxImages: setup.maxImages,
     ...(customSplit ? { roomCounts: setup.roomCounts } : {}),
+    // Only sent when set, so the default payload stays exactly what it was before room sets existed.
+    ...(setup.anglesPerRoom > 1 ? { anglesPerRoom: setup.anglesPerRoom } : {}),
+    ...(setup.sameHouse ? { sameHouse: true } : {}),
   };
 }
 
@@ -203,6 +213,14 @@ export function sanitizeSetup(raw: unknown): Setup {
         ? source.maxImages
         : d.maxImages,
     ...sanitizeRoomSplit(source, listOf(source.rooms, rooms, d.rooms)),
+    anglesPerRoom:
+      typeof source.anglesPerRoom === "number" &&
+      Number.isInteger(source.anglesPerRoom) &&
+      source.anglesPerRoom >= 1 &&
+      source.anglesPerRoom <= MAX_ANGLES
+        ? source.anglesPerRoom
+        : d.anglesPerRoom,
+    sameHouse: typeof source.sameHouse === "boolean" ? source.sameHouse : d.sameHouse,
   };
 }
 

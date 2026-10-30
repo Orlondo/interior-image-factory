@@ -5,6 +5,7 @@ import { CollapsibleSection, SummaryCard } from "@/components/ui-modernization";
 import { getIntensityStep } from "@/lib/looks";
 import { buildPromptPreview, buildPromptPreviewColors } from "@/lib/promptPreview";
 import { describeSplit, evenSplit } from "@/lib/roomMix";
+import { describeSets, liveLimitMessage, planRoomSets } from "@/lib/roomSets";
 import type { Setup } from "@/lib/setup";
 import type { GenerationUiState } from "@/lib/useGeneration";
 import { SectionCard } from "./SectionCard";
@@ -43,6 +44,18 @@ export function GenerationPanel({
   const [isPromptPreviewOpen, setIsPromptPreviewOpen] = useState(false);
   const promptPreview = useMemo(() => buildPromptPreview(setup), [setup]);
   const promptPreviewColorData = useMemo(() => buildPromptPreviewColors(setup), [setup]);
+  const limitMessage = liveLimitMessage(setup.maxImages, setup.anglesPerRoom, setup.sameHouse);
+  const setsLine = describeSets(
+    planRoomSets(
+      setup.rooms,
+      setup.roomSplitMode === "custom" && setup.rooms.length >= 2
+        ? setup.roomCounts
+        : evenSplit(setup.rooms, setup.maxImages),
+      setup.anglesPerRoom
+    ),
+    setup.anglesPerRoom,
+    setup.sameHouse
+  );
   const intensityStep = getIntensityStep(setup.colorIntensity);
   const summaryColorIntensity = `${intensityStep.label} (${setup.colorIntensity})`;
 
@@ -77,6 +90,7 @@ export function GenerationPanel({
                   : evenSplit(setup.rooms, setup.maxImages)
               )}`
             : `${setup.maxImages} images`,
+          ...(setsLine ? [setsLine] : []),
           `${setup.colorCoverage} coverage, intensity ${summaryColorIntensity}`,
         ]}
       />
@@ -164,7 +178,7 @@ export function GenerationPanel({
 
         {!canGenerate ? (
           <p role="status" className="text-sm text-[#FCD34D]">
-            Images per room must add up to {setup.maxImages} before you can generate.
+            {limitMessage ?? `Images per room must add up to ${setup.maxImages} before you can generate.`}
           </p>
         ) : null}
       </div>

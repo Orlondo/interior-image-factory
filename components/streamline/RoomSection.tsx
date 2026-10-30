@@ -7,6 +7,7 @@ import { resolveQuickSets } from "@/lib/roomPicker";
 import type { Camera, Condition, HomeQuality, Setup } from "@/lib/setup";
 import { SelectField } from "./fields";
 import { RoomMix } from "./RoomMix";
+import { RoomSets } from "./RoomSets";
 import { SectionCard } from "./SectionCard";
 
 const ROOM_CATEGORY_DEFINITIONS: Array<{ title: string; rooms: string[] }> = [
@@ -100,7 +101,7 @@ export function RoomSection({ setup, update, isOpen, onToggle }: RoomSectionProp
       icon="room"
       isOpen={isOpen}
       onToggle={onToggle}
-      summary={`${describeRooms(setup.rooms)} · ${setup.designStyle} · ${setup.homeQuality}${setup.condition === "pristine" ? "" : ` · ${setup.condition}`} · ${setup.roomSize}${setup.camera === "standard" ? "" : ` · ${setup.camera} angles`}`}
+      summary={`${describeRooms(setup.rooms)} · ${setup.designStyle} · ${setup.homeQuality}${setup.condition === "pristine" ? "" : ` · ${setup.condition}`} · ${setup.roomSize}${setup.camera === "standard" ? "" : ` · ${setup.camera} angles`}${setup.anglesPerRoom > 1 ? ` · ${setup.anglesPerRoom} angles per room` : ""}${setup.sameHouse ? " · one house" : ""}`}
     >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 lg:gap-5">
         <div className="md:col-span-2 lg:col-span-4">
@@ -114,6 +115,10 @@ export function RoomSection({ setup, update, isOpen, onToggle }: RoomSectionProp
 
         <div className="md:col-span-2 lg:col-span-4">
           <RoomMix setup={setup} update={update} />
+        </div>
+
+        <div className="md:col-span-2 lg:col-span-4">
+          <RoomSets setup={setup} update={update} />
         </div>
 
         <SelectField
