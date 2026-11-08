@@ -75,6 +75,8 @@ function getColorProfileExecutionRule(
   useLegacyNeutralGuardrails: boolean
 ): string {
   const colorProfileExecutionMap: Record<string, string> = {
+    "no fixed color palette (material-led)":
+      "Let the palette stay material-led and mood-driven rather than locked to a single color family. Prioritize warm stone, ivory, walnut, blackened metal, soft charcoal, linen, and restrained accents so the room can feel natural, elevated, and varied without defaulting to orange, blue, or green.",
     "current balanced palette (default)":
       useLegacyNeutralGuardrails
         ? "Keep a designer-curated neutral story centered on warm white, cream, taupe, greige, stone, and natural wood, with subtle accent restraint."
@@ -128,6 +130,12 @@ export function buildPrompt(
   ceilingTypes: string[],
   ceilingLightTypes: string[]
 ) {
+  const isBuilderGrade = homeQuality === "builder's grade layout";
+
+  if (isBuilderGrade) {
+    roomSize = "compact room (120-180 sq ft)";
+  }
+
   const colorMoodDirection =
     COLOR_MOOD_DIRECTION_MAP[colorMood] ?? COLOR_MOOD_DIRECTION_MAP["Warm Neutral"];
 
@@ -153,6 +161,26 @@ export function buildPrompt(
 
   const normalizedColorProfileTypes = Array.isArray(colorProfileTypes)
     ? colorProfileTypes
+    : [];
+
+  const normalizedFocalPointTypes = Array.isArray(focalPointTypes)
+    ? focalPointTypes.filter((focalPoint) => {
+        const normalizedFocalPoint = focalPoint.toLowerCase();
+        const isFoodFocalPoint =
+          normalizedFocalPoint.includes("thanksgiving") ||
+          normalizedFocalPoint.includes("dinner") ||
+          normalizedFocalPoint.includes("food");
+
+        if (room !== "dining room" && isFoodFocalPoint) {
+          return false;
+        }
+
+        if (room === "kitchen" && normalizedFocalPoint.includes("curtain")) {
+          return false;
+        }
+
+        return true;
+      })
     : [];
 
   const colorProfileDirection =
@@ -249,13 +277,13 @@ export function buildPrompt(
     "Keep palette family cohesion while allowing controlled variation and tonal exploration across walls, cabinetry, millwork, built-ins, rugs, furniture, and artwork.";
 
   const focalPointDirection =
-    focalPointTypes.length > 0
-      ? focalPointTypes.join(", ")
+    normalizedFocalPointTypes.length > 0
+      ? normalizedFocalPointTypes.join(", ")
       : "balanced composition with subtle design elements";
 
   const focalPointRule =
-    focalPointTypes.length > 0
-      ? `Feature one or more avant-garde focal points: ${focalPointTypes.join(", ")}. Make these elements daringly bold, conceptually interesting, and visually commanding. Prioritize artistic expression and experimental design over conventional aesthetics. These should provoke thought or challenge expectations.`
+    normalizedFocalPointTypes.length > 0
+      ? `Feature one or more clear design focal points: ${normalizedFocalPointTypes.join(", ")}. Keep these elements visually distinctive, design-forward, and appropriate for realistic residential interiors.`
       : "Compose with subtle design elements and balanced spatial flow without one dominating focal point.";
 
   const windowDesignDirection =
@@ -287,29 +315,29 @@ export function buildPrompt(
 
   const styleDirections: Record<string, string> = {
     modern:
-      "Clean geometry, contemporary palette with visible color accents, large format materials, minimal ornament, integrated lighting, uncluttered composition.",
+      "Crisp rectilinear geometry, flat-panel handleless cabinetry, large-format porcelain or stone slabs, slim metal trims, low sleek sofas with sharp edges, linear recessed lighting, a few bold abstract art pieces. Avoid ornament, rustic wood, and curved or vintage furniture.",
     contemporary:
-      "Current trend-forward mix of soft curves and clean lines, layered textures, statement pieces, balanced contrast.",
+      "Soft curved sofas and bouclé chairs, rounded coffee tables, sculptural statement lighting, layered textures, mixed matte and glossy finishes, current trend-forward styling. Avoid hard industrial edges and antique details.",
     minimalist:
-      "Radical simplicity, tightly curated palette with one or two deliberate color moments, negative space, low visual noise, monolithic forms, minimal accessories.",
+      "Extremely sparse: very few furniture pieces, large empty floor and wall areas, monolithic plain forms, hidden storage, flush surfaces, no visible decor clutter, at most one deliberate object. Avoid patterns, layered textiles, and busy shelves.",
     scandinavian:
-      "Light wood, white walls, soft daylight, cozy textiles, functional furniture, airy and warm simplicity.",
+      "Pale blonde oak or birch floors and furniture, white walls, cozy wool throws and sheepskin, simple functional furniture with slim legs, paper pendant lamps, plants in simple pots, bright airy daylight. Avoid dark heavy materials and ornate detail.",
     japandi:
-      "Japanese-Scandinavian fusion, natural materials, low-profile furniture, serene composition, restrained palette with subtle accent control.",
+      "Low-profile furniture close to the floor, warm oak and dark walnut contrast, paper shoji-style screens, ceramic wabi vessels, linen and bouclé in earth tones, rounded organic shapes, asymmetric calm styling with generous empty space. Avoid bright color and clutter.",
     "mid-century modern":
-      "1950s-60s silhouettes, walnut/teak tones, tapered legs, iconic lounge forms, geometric rugs, playful vintage accents.",
+      "Walnut and teak furniture with tapered splayed legs, low credenza, iconic lounge chair silhouettes, sputnik or globe pendant lights, geometric rugs, mustard, teal, and burnt orange accents, wood-slat details. Avoid contemporary minimal slab forms.",
     industrial:
-      "Raw materials like concrete, steel, brick, exposed structure, matte black details, loft character and utilitarian forms.",
+      "Exposed red brick and raw concrete, black steel-framed windows and shelving, visible ductwork and beams, distressed leather sofas, reclaimed wood, Edison-style fixtures, worn metal. Avoid soft pastel finishes and delicate decor.",
     bohemian:
-      "Layered eclectic decor, artisanal textiles, mixed patterns, handmade objects, relaxed lived-in styling with global influences.",
+      "Densely layered patterned rugs, macramé and woven wall hangings, rattan and cane furniture, many plants, mixed global textiles and cushions, low floor seating, warm eclectic handmade objects, richly lived-in. Avoid sparse, sterile, or symmetrical styling.",
     coastal:
-      "Bright airy interiors, light woods, linen textures, ocean-inspired palette, breezy relaxed elegance, sunlit softness.",
+      "White-washed and light driftwood finishes, white slipcovered sofas, blue and sand accents, rattan and jute textures, linen curtains, shell and rope details, very bright sunlit feel. Avoid dark woods and heavy drapery.",
     farmhouse:
-      "Warm rustic-modern mix, painted millwork, natural wood beams, classic joinery, comfortable inviting family-oriented styling.",
+      "Shaker cabinetry, apron-front sink, exposed timber beams, shiplap or board-and-batten walls, reclaimed wood tables, black iron hardware, cozy checked or linen textiles. Avoid sleek high-gloss and ultra-modern forms.",
     transitional:
-      "Balanced blend of traditional and contemporary, timeless furniture shapes, balanced base with refined but clearly visible color accents.",
+      "Blend of classic and clean-lined: tailored sofas with rolled arms, neutral upholstery, simple raised-panel millwork, polished nickel and brass, soft symmetrical arrangement, timeless restraint. Avoid extreme modern or ornate historic styling.",
     traditional:
-      "Classic detailing, symmetrical layouts, rich millwork, tailored upholstery, elegant layered decor and heritage finishes.",
+      "Crown molding, wainscoting, symmetrical furniture groupings, tufted and skirted upholstery, wood furniture with carved details, chandeliers, patterned drapery and rugs, rich warm woods. Avoid sleek minimal and industrial forms.",
     "art deco":
       "Bold geometry, luxurious materials, brass and lacquer accents, dramatic contrast, glamorous sculptural motifs.",
     "organic modern":
@@ -317,7 +345,9 @@ export function buildPrompt(
     "quiet luxury":
       "Understated premium finishes, tonal layering with refined visible color accents, bespoke detailing, sophisticated composition, impeccable craftsmanship.",
     eclectic:
-      "Curated mix of eras and styles, intentional contrast, expressive art and objects, cohesive yet personality-driven composition.",
+      "Deliberate clash of eras and origins: a vintage piece beside a modern one, mixed patterns, bold gallery wall, unexpected color pops, collected antiques and curios, varied furniture shapes. Avoid matching sets and uniform look.",
+    "wabi-sabi":
+      "Imperfect handmade beauty: rough lime-wash or clay plaster walls, weathered raw wood, irregular stoneware and ceramics, aged linen, muted earthy tones, low organic furniture, dried branches, visible patina and asymmetry. Avoid glossy, polished, symmetrical, or brand-new-looking finishes.",
     "liminal spaces":
       "Transitional uncanny ambiance, sparse composition, atmospheric lighting, quiet emptiness, clean geometric corridors and thresholds, subtly surreal but realistic architectural mood.",
   };
@@ -341,7 +371,7 @@ export function buildPrompt(
 
   const homeQualityDirections: Record<"builder's grade layout" | "everyday" | "upscale" | "luxury" | "ultra luxury", string> = {
     "builder's grade layout":
-      "Standard tract-home planning with common room proportions, practical circulation, and straightforward spatial organization.",
+      "Small entry-level tract-home shell: low 8-foot ceilings, modest boxy room proportions, narrow walkways, plain drywall, stock cabinetry, furniture sized for a small space. Treat the selected window, wall, ceiling, lighting, and focal point options as affordable, realistic upgrades applied to this small room, so the room shows how modest changes improve a builder-grade home.",
     everyday:
       "Comfortable, practical, realistic materials and furniture; clean but approachable styling and moderate finishes.",
     upscale:
@@ -395,7 +425,7 @@ export function buildPrompt(
 
   const qualityNegativeDirection: Record<"builder's grade layout" | "everyday" | "upscale" | "luxury" | "ultra luxury", string> = {
     "builder's grade layout":
-      "Avoid bespoke luxury detailing, palatial scale, exotic premium materials, and couture styling.",
+      "Avoid making the room itself large, grand, or open, and avoid vaulted ceilings, exotic premium materials, and couture styling. Selected upgrades such as larger windows, wall treatments, and lighting should still appear clearly.",
     everyday:
       "Avoid opulent mansion cues, excessive marble, palatial detailing, or ultra-luxury staging.",
     upscale:
@@ -413,16 +443,14 @@ Design Direction:
 - Residential quality tier: ${homeQuality}; ${homeQualityDirection}
 - Atmosphere direction: ${qualityAtmosphere[homeQuality]}
 - Style fidelity (critical): ${styleDirection}
-- Every major design decision must reinforce ${style} characteristics so this image reads unmistakably as ${style}
-- Bespoke millwork and seamless built-ins
+- Every major design decision (furniture shapes, materials, lighting fixtures, decor) must reinforce ${style} characteristics so this image reads unmistakably as ${style}, and must not resemble other design styles
 - Material direction: ${qualityMaterialDirection[homeQuality]}
   - Focal point direction: ${focalPointDirection}
   - Focal point rule (critical): ${focalPointRule}
-  - When focal points are selected: prioritize artistic impact, conceptual clarity, and avant-garde expression over comfort or conventionality
-  - Sculptural and experimental designer furniture, collectible art objects, unconventional materials
-  - Styling accessories: bold art pieces, conceptual sculptures, unconventional objects that challenge the eye
-  - Accessories should feel intentional, provocative, and culturally aware - pushing boundaries while maintaining cohesion
-- Room size direction: ${roomSize}; architecture, furniture scale, circulation space, and camera composition should match this size faithfully
+  - When focal points are selected: prioritize artistic impact, conceptual clarity, and cohesive residential styling
+  - Styling accessories: choose decor that is true to ${style}, tasteful and cohesive
+  - Accessories should feel intentional and cohesive with the style
+- Room size direction: ${roomSize}; architecture, furniture scale, circulation space, and camera composition should match this size faithfully${isBuilderGrade ? ". Builder-grade layout rule (critical): the room itself stays small, modest, and tightly proportioned with a standard low ceiling and only essential furniture; do not enlarge it. The selected windows, walls, ceiling, lighting, and focal points are visible upgrades within that small room and must still be clearly shown" : ""}
 - Wall color palette direction: ${wallColorPalette}
 - Color mood direction: ${colorMood}; ${colorMoodDirection}
 - Color rule priority (critical): Room Type > Color Strategy > Color Coverage > Color Intensity > Palette Family > Color Mood > Interior Style > Home Quality > Wall Type
@@ -446,14 +474,14 @@ Design Direction:
 - Window design direction: ${windowDesignDirection}, balanced with wall area and aligned to the selected outside view
 - Window rule (critical): keep window-to-wall ratio consistent with the selected window style and avoid full glazing unless "floor-to-ceiling glazing walls" is selected
 - Ceiling treatment direction: ${ceilingDirection}, elegant and integrated with the lighting design
-- Ceiling lighting direction: ${ceilingLightingDirection}, refined and appropriate for luxury residential interiors
+- Ceiling lighting direction: ${ceilingLightingDirection}, appropriate for the ${style} style
 - Color cast guardrail (critical): ${noGreenCastRule}
 - Perfect spatial balance, clean lines, no clutter
 
 Lighting:
 - Bright natural daylight with an airy, sunlit interior feel and clean ambient bounce
 - Lifted midtones and soft shadow detail so corners read clearly without looking flat
-- Warm indirect cove lighting and layered practical fixtures to create an elegant luminous glow
+- Warm indirect lighting and layered practical fixtures whose design matches the ${style} style
 - Realistic high-key exposure with preserved highlight detail (no blown windows)
 - HDR photoreal rendering, physically accurate materials
 
@@ -467,6 +495,8 @@ View:
 
 Negative cues:
 - No cartoon look, no CGI plastic surfaces, no neon-like oversaturation, no distortion, no clutter
+- No people, faces, hands, bodies, mannequins, or human silhouettes
+- Interior architecture and decor only; no person-centric or character-focused imagery
 - ${legacyNegativeCues}
 ${useLegacyNeutralGuardrails ? "- No green hue cast, green tint, teal cast, blue-green cast, or gray-green cast on walls, stone, plaster, millwork, or dominant artwork unless explicitly selected" : "- Avoid unintentional color casts; walls, stone, plaster, and millwork must remain true to the selected palette"}
 - Dark walls must be warm charcoal or soft near-black, not blue-heavy, not gray-green, and not muddy

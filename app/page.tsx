@@ -49,6 +49,19 @@ import {
   type ChipOption,
 } from "@/components/ui-modernization";
 import { getColorPreviewData } from "@/lib/promptBuilder/colorPalette";
+import { wholeHouseShotGroups, wholeHouseShots } from "@/lib/wholeHouse";
+import {
+  accessoryOptionGroups,
+  createEmptyAccessoryOptions,
+  type AccessoryOptions,
+} from "@/lib/accessoryCombinations";
+import {
+  createEmptyExteriorOptions,
+  exteriorOptionGroups,
+  photoTypes,
+  type ExteriorOptions,
+  type PhotoType,
+} from "@/lib/exteriorCombinations";
 import { buildPrompt } from "../lib/promptBuilder";
 
 type GeneratedImage = {
@@ -176,10 +189,10 @@ export default function Home() {
     rooms[0] ?? "living room",
   ]);
   const [selectedViews, setSelectedViews] = useState<string[]>([
-    views[0] ?? "regular inner-city neighborhood",
+    views[0] ?? "residential inner-city street with houses and mature landscaping",
   ]);
   const [selectedColorProfiles, setSelectedColorProfiles] = useState<string[]>([
-    colorProfiles[0] ?? "current balanced palette (default)",
+    colorProfiles[0] ?? "no fixed color palette (material-led)",
   ]);
   const [selectedFocalPoints, setSelectedFocalPoints] = useState<string[]>([]);
   const [selectedWindowStyles, setSelectedWindowStyles] = useState<string[]>([
@@ -197,9 +210,9 @@ export default function Home() {
   const [roomSize, setRoomSize] = useState(
     roomSizes[1] ?? "standard room (180-280 sq ft)"
   );
-  const [designStyle, setDesignStyle] = useState(
-    styles[0] ?? "modern"
-  );
+  const [selectedDesignStyles, setSelectedDesignStyles] = useState<string[]>([
+    styles[0] ?? "modern",
+  ]);
   const [colorMood, setColorMood] = useState<ColorMood>(
     colorMoods[0] ?? "Warm Neutral"
   );
@@ -228,6 +241,90 @@ export default function Home() {
   const [isLayoutDetailsOpen, setIsLayoutDetailsOpen] = useState(false);
   const [isAdvancedSettingsOpen, setIsAdvancedSettingsOpen] = useState(false);
   const [isPromptPreviewOpen, setIsPromptPreviewOpen] = useState(true);
+  const [selectedPhotoTypes, setSelectedPhotoTypes] = useState<PhotoType[]>(["interior"]);
+  const [exteriorOptions, setExteriorOptions] = useState<ExteriorOptions>(
+    createEmptyExteriorOptions
+  );
+  const [isExteriorDetailsOpen, setIsExteriorDetailsOpen] = useState(false);
+  const [wholeHouse, setWholeHouse] = useState(false);
+  const [runAsBatch, setRunAsBatch] = useState(false);
+  const [selectedShotIds, setSelectedShotIds] = useState<string[]>(
+    () => wholeHouseShots.map((shot) => shot.id)
+  );
+
+  function toggleShot(id: string) {
+    setSelectedShotIds((previous) =>
+      previous.includes(id) ? previous.filter((item) => item !== id) : [...previous, id]
+    );
+  }
+
+  function toggleShotGroup(group: string) {
+    const groupIds = wholeHouseShots.filter((shot) => shot.group === group).map((shot) => shot.id);
+
+    setSelectedShotIds((previous) =>
+      groupIds.every((id) => previous.includes(id))
+        ? previous.filter((id) => !groupIds.includes(id))
+        : [...new Set([...previous, ...groupIds])]
+    );
+  }
+  const [accessoryOptions, setAccessoryOptions] = useState<AccessoryOptions>(
+    createEmptyAccessoryOptions
+  );
+  const [isAccessoryDetailsOpen, setIsAccessoryDetailsOpen] = useState(false);
+  const includeAccessory = selectedPhotoTypes.includes("accessory") && !wholeHouse;
+
+  function toggleAccessoryOption(key: keyof AccessoryOptions, allOptions: string[], value: string) {
+    setAccessoryOptions((previous) => {
+      const current = previous[key];
+
+      if (value === ALL_VALUE) {
+        return {
+          ...previous,
+          [key]: current.length === allOptions.length ? [] : [...allOptions],
+        };
+      }
+
+      return {
+        ...previous,
+        [key]: current.includes(value)
+          ? current.filter((item) => item !== value)
+          : [...current, value],
+      };
+    });
+  }
+  const includeInterior = selectedPhotoTypes.includes("interior") || wholeHouse;
+  const includeExterior = selectedPhotoTypes.includes("exterior") || wholeHouse;
+
+  function togglePhotoType(type: PhotoType) {
+    setSelectedPhotoTypes((previous) => {
+      if (!previous.includes(type)) {
+        return photoTypes.filter((item) => item === type || previous.includes(item));
+      }
+
+      // Keep at least one photo type selected.
+      return previous.length > 1 ? previous.filter((item) => item !== type) : previous;
+    });
+  }
+
+  function toggleExteriorOption(key: keyof ExteriorOptions, allOptions: string[], value: string) {
+    setExteriorOptions((previous) => {
+      const current = previous[key];
+
+      if (value === ALL_VALUE) {
+        return {
+          ...previous,
+          [key]: current.length === allOptions.length ? [] : [...allOptions],
+        };
+      }
+
+      return {
+        ...previous,
+        [key]: current.includes(value)
+          ? current.filter((item) => item !== value)
+          : [...current, value],
+      };
+    });
+  }
   const activeRequestControllerRef = useRef<AbortController | null>(null);
   const cancelRequestedRef = useRef(false);
   const activeBatchIdRef = useRef<string | null>(null);
@@ -236,7 +333,7 @@ export default function Home() {
 
   const homeQualityDescriptions: Record<HomeQuality, string> = {
     "builder's grade layout":
-      "Standard tract-home layout with practical finishes and simpler detailing.",
+      "Small entry-level tract-home room with low ceilings and simple finishes; your selected upgrades (windows, walls, lighting) still show.",
     everyday:
       "Practical, comfortable finishes and realistic residential styling.",
     upscale:
@@ -312,7 +409,8 @@ export default function Home() {
     selectedRooms.length > 0
       ? selectedRooms[0]
       : (rooms[0] ?? "living room");
-  const summaryStyle = designStyle;
+  const summaryStyle =
+    selectedDesignStyles.length > 0 ? selectedDesignStyles.join(", ") : (styles[0] ?? "modern");
   const summaryQuality = homeQuality;
   const summaryAspect = aspectRatio;
   const summaryCount = maxImages;
@@ -321,13 +419,26 @@ export default function Home() {
     (total, group) => total + group.selected.length,
     0
   );
+  const exteriorSelectedCount = exteriorOptionGroups.reduce(
+    (total, group) => total + exteriorOptions[group.key].length,
+    0
+  );
+  const accessorySelectedCount = accessoryOptionGroups.reduce(
+    (total, group) => total + accessoryOptions[group.key].length,
+    0
+  );
   const advancedSettingsSummary = randomizeWallColor
     ? `${fileSize} file size, random wall colors on`
     : `${fileSize} file size, random wall colors off`;
 
   const promptPreview = useMemo(() => {
+    const previewStyle =
+      selectedDesignStyles.length > 0 ? selectedDesignStyles[0] : (styles[0] ?? "modern");
     const previewRoom = selectedRooms[0] ?? rooms[0] ?? "living room";
-    const previewView = selectedViews[0] ?? views[0] ?? "regular inner-city neighborhood";
+    const previewView =
+      selectedViews[0] ??
+      views[0] ??
+      "residential inner-city street with houses and mature landscaping";
     const previewColorProfile =
       selectedColorProfiles[0] ?? colorProfiles[0] ?? "current balanced palette (default)";
     const previewFocalPoint = selectedFocalPoints.slice(0, 1);
@@ -339,7 +450,7 @@ export default function Home() {
     return buildPrompt(
       previewRoom,
       roomSize,
-      designStyle,
+      previewStyle,
       colorMood,
       colorIntensity,
       colorStrategy,
@@ -364,7 +475,6 @@ export default function Home() {
     colorIntensity,
     colorMood,
     colorStrategy,
-    designStyle,
     heroColor,
     homeQuality,
     maxImages,
@@ -372,6 +482,7 @@ export default function Home() {
     selectedCeilings,
     selectedCeilingLights,
     selectedColorProfiles,
+    selectedDesignStyles,
     selectedFocalPoints,
     selectedRooms,
     selectedViews,
@@ -426,6 +537,7 @@ export default function Home() {
             "family room",
             "breakfast nook",
             "library",
+            "sunroom",
             "dining room",
           ],
         },
@@ -442,11 +554,14 @@ export default function Home() {
             "mud room",
             "walk-in closet",
             "foyer",
+            "hallway",
+            "staircase",
+            "powder room",
           ],
         },
         {
           title: "Entertainment Spaces",
-          rooms: ["theater room", "game room", "wine cellar", "recording studio"],
+          rooms: ["theater room", "game room", "wine cellar", "recording studio", "home bar"],
         },
         {
           title: "Fitness Spaces",
@@ -454,7 +569,7 @@ export default function Home() {
         },
         {
           title: "Utility Spaces",
-          rooms: ["basement"],
+          rooms: ["basement", "garage"],
         },
       ];
 
@@ -624,10 +739,11 @@ export default function Home() {
           ceilings: selectedCeilings,
           ceilingLights: selectedCeilingLights,
           roomSize,
-          designStyle,
+          designStyles: selectedDesignStyles,
+          designStyle: selectedDesignStyles.length > 0 ? selectedDesignStyles.join(", ") : styles[0],
           colorMood,
           colorStrategy,
-            colorCoverage,
+          colorCoverage,
           heroColor,
           colorIntensity,
           colorPresence: colorIntensity,
@@ -637,6 +753,12 @@ export default function Home() {
           fileSize,
           aspectRatio,
           maxImages,
+          photoTypes: selectedPhotoTypes,
+          exterior: exteriorOptions,
+          accessory: accessoryOptions,
+          wholeHouse,
+          wholeHouseShotIds: selectedShotIds,
+          runAsBatch,
         }),
         signal: controller.signal,
       });
@@ -689,9 +811,14 @@ export default function Home() {
         setGenerationUiState("generating");
         setGenerationProgress(null);
         setGenerationStatusMessage("Generating images...");
-        setImages(data.flatMap((item) => item.data ?? []));
+        const generatedImages = data.flatMap((item) => item.data ?? []);
+        setImages(generatedImages);
         setGenerationUiState("complete");
-        setGenerationStatusMessage(`Generated ${data.length} image responses.`);
+        setGenerationStatusMessage(
+          generatedImages.length < maxImages
+            ? `Generated ${generatedImages.length} of ${maxImages} images. Some prompt variations may have been filtered by safety checks.`
+            : `Generated ${generatedImages.length} of ${maxImages} images.`
+        );
         return;
       }
 
@@ -898,6 +1025,17 @@ export default function Home() {
     toggleGroupOption(value, group.setSelected);
   }
 
+  function toggleDesignStyle(value: string) {
+    setSelectedDesignStyles((previous) => {
+      if (previous.includes(value)) {
+        const next = previous.filter((style) => style !== value);
+        return next.length > 0 ? next : [styles[0] ?? "modern"];
+      }
+
+      return [...previous, value];
+    });
+  }
+
   function getOptionalGroupChipOptions(group: CheckboxGroupConfig): ChipOption[] {
     return [
       { value: ALL_VALUE, label: group.allLabel },
@@ -916,7 +1054,78 @@ export default function Home() {
       <div className="space-y-4">
         <section className="rounded-[20px] border border-[#262B36] bg-[#171A21] px-4 py-4 sm:px-5 sm:py-5">
           <h2 className="text-sm font-semibold">Main Prompt Setup</h2>
+          <div className="mt-4">
+            <label className="mb-3 flex items-start gap-2 rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA]">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 accent-[#4F8CFF]"
+                checked={wholeHouse}
+                onChange={(event) => setWholeHouse(event.target.checked)}
+              />
+              <span>
+                Whole house ({selectedShotIds.length} of {wholeHouseShots.length} shots selected)
+                <span className="block text-xs text-[#98A2B3]">
+                  One cohesive home where every image shares one style and palette. Choose the shots below.
+                </span>
+              </span>
+            </label>
+            {wholeHouse ? (
+              <div className="mb-3 space-y-3">
+                {wholeHouseShotGroups.map((group) => {
+                  const groupShots = wholeHouseShots.filter((shot) => shot.group === group);
+                  const allSelected = groupShots.every((shot) => selectedShotIds.includes(shot.id));
+
+                  return (
+                    <div key={group}>
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="text-sm font-medium text-[#98A2B3]">{group}</span>
+                        <button
+                          type="button"
+                          className="text-xs text-[#4F8CFF] hover:underline"
+                          onClick={() => toggleShotGroup(group)}
+                        >
+                          {allSelected ? "Clear" : "Select all"}
+                        </button>
+                      </div>
+                      <ChipGroup
+                        options={groupShots.map((shot) => ({ value: shot.id, label: shot.label }))}
+                        selectedValues={selectedShotIds}
+                        onToggleValue={toggleShot}
+                        ariaLabel={group}
+                      />
+                    </div>
+                  );
+                })}
+                {selectedShotIds.length === 0 ? (
+                  <p className="text-xs text-[#FCD34D]">
+                    No shots selected, so every shot will be generated.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            {wholeHouse ? null : (
+              <>
+            <span className="text-sm font-medium text-[#98A2B3]">Photo types</span>
+            <ChipGroup
+              options={[
+                { value: "interior", label: "Interior" },
+                { value: "exterior", label: "Exterior" },
+                { value: "accessory", label: "Accessory close-up" },
+              ]}
+              selectedValues={selectedPhotoTypes}
+              onToggleValue={(value) => togglePhotoType(value as PhotoType)}
+              ariaLabel="Photo types"
+            />
+            {selectedPhotoTypes.length > 1 ? (
+              <p className="mt-2 text-xs text-[#98A2B3]">
+                Images are split about evenly across the selected photo types.
+              </p>
+            ) : null}
+              </>
+            )}
+          </div>
           <div className="mt-4 grid grid-cols-1 gap-4 md:[grid-template-columns:repeat(auto-fit,minmax(clamp(16rem,42vw,24rem),1fr))] lg:gap-5">
+            {includeInterior && !wholeHouse ? (
             <div className="lg:col-span-2">
               <RoomTypePicker
                 selectedRooms={selectedRooms}
@@ -925,22 +1134,16 @@ export default function Home() {
                 onToggleRoom={toggleRoomCard}
               />
             </div>
-
+            ) : null}
             <div className="min-w-0">
               <label className="flex min-w-0 flex-col gap-2">
-                <span className="text-sm font-medium text-[#98A2B3]">Interior Design Style</span>
-                <select
-                  aria-label="Interior design style"
-                  className="h-[42px] w-full rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA] transition hover:border-[#4F8CFF] focus:outline-none focus:ring-2 focus:ring-[#4F8CFF]"
-                  value={designStyle}
-                  onChange={(event) => setDesignStyle(event.target.value)}
-                >
-                  {styles.map((style) => (
-                    <option key={style} value={style}>
-                      {style}
-                    </option>
-                  ))}
-                </select>
+                <span className="text-sm font-medium text-[#98A2B3]">Interior Design Styles</span>
+                <ChipGroup
+                  options={styles.map((style) => ({ value: style, label: style }))}
+                  selectedValues={selectedDesignStyles}
+                  onToggleValue={toggleDesignStyle}
+                  ariaLabel="Interior design styles"
+                />
               </label>
             </div>
 
@@ -1093,7 +1296,7 @@ export default function Home() {
               </label>
             </div>
 
-            <div className="min-w-0">
+            <div className={wholeHouse ? "hidden" : "min-w-0"}>
               <label className="flex min-w-0 flex-col gap-2">
                 <span className="text-sm font-medium text-[#98A2B3]">Max images</span>
                 <select
@@ -1119,6 +1322,89 @@ export default function Home() {
           </div>
         </section>
 
+        {includeAccessory ? (
+          <section className="w-full space-y-2">
+            <CollapsibleSection
+              title="Accessory Close-up Details"
+              collapsedSummary={`${accessorySelectedCount} customizations selected`}
+              isOpen={isAccessoryDetailsOpen}
+              onToggle={() => setIsAccessoryDetailsOpen((previous) => !previous)}
+            >
+              <div className="space-y-2">
+                {accessoryOptionGroups.map((group) => {
+                  const selected = accessoryOptions[group.key];
+
+                  return (
+                    <CollapsibleSection
+                      key={group.key}
+                      title={group.legend}
+                      selectedCount={selected.length}
+                    >
+                      <ChipGroup
+                        options={[
+                          { value: ALL_VALUE, label: group.allLabel },
+                          ...group.options.map((option) => ({ value: option, label: option })),
+                        ]}
+                        selectedValues={
+                          selected.length === group.options.length
+                            ? [ALL_VALUE, ...selected]
+                            : selected
+                        }
+                        onToggleValue={(value) =>
+                          toggleAccessoryOption(group.key, group.options, value)
+                        }
+                        ariaLabel={group.legend}
+                      />
+                    </CollapsibleSection>
+                  );
+                })}
+              </div>
+            </CollapsibleSection>
+          </section>
+        ) : null}
+
+        {includeExterior ? (
+          <section className="w-full space-y-2">
+            <CollapsibleSection
+              title="Exterior Details"
+              collapsedSummary={`${exteriorSelectedCount} customizations selected`}
+              isOpen={isExteriorDetailsOpen}
+              onToggle={() => setIsExteriorDetailsOpen((previous) => !previous)}
+            >
+              <div className="space-y-2">
+                {exteriorOptionGroups.map((group) => {
+                  const selected = exteriorOptions[group.key];
+
+                  return (
+                    <CollapsibleSection
+                      key={group.key}
+                      title={group.legend}
+                      selectedCount={selected.length}
+                    >
+                      <ChipGroup
+                        options={[
+                          { value: ALL_VALUE, label: group.allLabel },
+                          ...group.options.map((option) => ({ value: option, label: option })),
+                        ]}
+                        selectedValues={
+                          selected.length === group.options.length
+                            ? [ALL_VALUE, ...selected]
+                            : selected
+                        }
+                        onToggleValue={(value) =>
+                          toggleExteriorOption(group.key, group.options, value)
+                        }
+                        ariaLabel={group.legend}
+                      />
+                    </CollapsibleSection>
+                  );
+                })}
+              </div>
+            </CollapsibleSection>
+          </section>
+        ) : null}
+
+        {includeInterior ? (
         <section className="w-full space-y-2">
           <CollapsibleSection
             title="Optional Details"
@@ -1144,7 +1430,9 @@ export default function Home() {
             </div>
           </CollapsibleSection>
         </section>
+        ) : null}
 
+        {includeInterior ? (
         <section className="w-full space-y-2">
           <CollapsibleSection
             title="Layout Details"
@@ -1170,6 +1458,7 @@ export default function Home() {
             </label>
           </CollapsibleSection>
         </section>
+        ) : null}
 
         <section className="w-full space-y-2">
           <CollapsibleSection
@@ -1215,6 +1504,22 @@ export default function Home() {
               `${summaryColorCoverage} coverage, intensity ${summaryColorIntensity}`,
             ]}
           />
+
+          <label className="mt-3 flex items-start gap-2 rounded-[10px] border border-[#262B36] bg-[#0F1115] px-3 py-2 text-sm text-[#F5F7FA]">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-[#4F8CFF]"
+              checked={runAsBatch}
+              onChange={(event) => setRunAsBatch(event.target.checked)}
+            />
+            <span>
+              Run as batch (half price, up to 24h)
+              <span className="block text-xs text-[#98A2B3]">
+                Unchecked runs live at the standard rate, at any size. Large live runs take longer
+                and keep this page waiting.
+              </span>
+            </span>
+          </label>
 
           {generationIndicatorVisible ? (
             <div className={`mt-3 rounded-[16px] border p-4 ${generationIndicatorTone}`}>

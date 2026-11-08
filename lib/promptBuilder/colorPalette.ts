@@ -392,6 +392,82 @@ const FAMILY_PALETTES: Record<HeroColor, readonly PaletteVariant[]> = {
       woodTone: "dark oak",
     },
   ],
+  "Pink Mixed": [
+    {
+      name: "Blush, Rosewood, Brass",
+      primary: "blush pink",
+      secondary: "dusty rose",
+      tertiary: "warm mauve",
+      neutralBase: "ivory and light limestone",
+      metalAccent: "soft brass",
+      woodTone: "white oak",
+    },
+    {
+      name: "Rose, Plum, Walnut",
+      primary: "rose pink",
+      secondary: "muted berry",
+      tertiary: "dusty plum",
+      neutralBase: "warm white and putty",
+      metalAccent: "aged brass",
+      woodTone: "walnut",
+    },
+    {
+      name: "Coral Pink, Sage, Oak",
+      primary: "muted coral pink",
+      secondary: "soft rose",
+      tertiary: "sage green",
+      neutralBase: "cream and pale stone",
+      metalAccent: "brushed bronze",
+      woodTone: "natural oak",
+    },
+    {
+      name: "Deep Rose, Cocoa, Brass",
+      primary: "deep rose",
+      secondary: "muted blush",
+      tertiary: "cocoa",
+      neutralBase: "oat and warm ivory",
+      metalAccent: "soft brass",
+      woodTone: "dark walnut",
+    },
+  ],
+  "Purple Mixed": [
+    {
+      name: "Amethyst, Lilac, Stone",
+      primary: "muted amethyst",
+      secondary: "soft lilac",
+      tertiary: "deep plum",
+      neutralBase: "pale stone and ivory",
+      metalAccent: "brushed nickel",
+      woodTone: "white oak",
+    },
+    {
+      name: "Plum, Lavender, Brass",
+      primary: "plum",
+      secondary: "dusty lavender",
+      tertiary: "aubergine",
+      neutralBase: "warm gray and cream",
+      metalAccent: "muted brass",
+      woodTone: "walnut",
+    },
+    {
+      name: "Violet, Teal, Walnut",
+      primary: "muted violet",
+      secondary: "soft purple",
+      tertiary: "deep teal",
+      neutralBase: "warm white and limestone",
+      metalAccent: "aged bronze",
+      woodTone: "smoked oak",
+    },
+    {
+      name: "Orchid, Charcoal, Gold",
+      primary: "dusty orchid",
+      secondary: "deep plum",
+      tertiary: "charcoal",
+      neutralBase: "oat and pale stone",
+      metalAccent: "soft gold",
+      woodTone: "dark walnut",
+    },
+  ],
 };
 
 function clampColorIntensity(colorIntensity: number): number {
@@ -761,5 +837,5 @@ export function buildColorPaletteDirective(input: {
     maxImages: input.maxImages,
   });
 
-  return `Color system: mood ${input.colorMood}; strategy ${input.colorStrategy}; coverage ${input.colorCoverage}; style ${input.style}. Selected palette family ${palette.family}. Selected palette ${palette.name}. Palette source: ${palette.source}. Required layered palette roles for this image: Primary ${paletteStory.primary}; Secondary ${paletteStory.secondary}; Complementary Accent ${paletteStory.complementaryAccent}; Neutral Grounding ${paletteStory.neutralGrounding}; Wood Tone ${paletteStory.woodTone}; Metal Finish ${paletteStory.metalFinish}; Contrast Tone ${paletteStory.contrastTone}. ${strategyDirective} ${coverageDirective} ${architecturalSurfaceDirective} ${heroDirective} ${intensityDirective} ${variationDirective} ${paletteEvolutionDirective} Keep output realistic, upscale, and materially coherent. Intensity controls amount of color application, not the number of palette roles. Never collapse to two-color schemes like green + beige, blue + gray, red + cream, sage + oak, or terracotta + cream.`;
+  return `Color system: mood ${input.colorMood}; strategy ${input.colorStrategy}; coverage ${input.colorCoverage}; style ${input.style}. Selected palette family ${palette.family}. Selected palette ${palette.name}. Palette source: ${palette.source}. Required layered palette roles for this image: Primary ${paletteStory.primary}; Secondary ${paletteStory.secondary}; Complementary Accent ${paletteStory.complementaryAccent}; Neutral Grounding ${paletteStory.neutralGrounding}; Wood Tone ${paletteStory.woodTone}; Metal Finish ${paletteStory.metalFinish}; Contrast Tone ${paletteStory.contrastTone}. ${strategyDirective} ${coverageDirective} ${architecturalSurfaceDirective} ${heroDirective} ${intensityDirective} ${variationDirective} ${paletteEvolutionDirective} Allow broader accent variation within the selected palette family and material story so the room can shift between warm neutrals, earthy notes, charcoal, brass, or subdued jewel tones without repeating the same orange, blue, or green narrative. Keep output realistic, upscale, and materially coherent. Intensity controls amount of color application, not the number of palette roles. Maintain a cohesive high-end look; avoid chaotic color drift or neon-like saturation.`;
 }

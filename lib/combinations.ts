@@ -4,6 +4,7 @@ export type RoomType =
   | "family room"
   | "breakfast nook"
   | "library"
+  | "sunroom"
   | "bedroom"
   | "nursery"
   | "kitchen"
@@ -11,6 +12,7 @@ export type RoomType =
   | "foyer"
   | "dining room"
   | "basement"
+  | "garage"
   | "home office"
   | "home gym"
   | "theater room"
@@ -20,7 +22,11 @@ export type RoomType =
   | "pantry"
   | "mud room"
   | "walk-in closet"
-  | "laundry room";
+  | "laundry room"
+  | "hallway"
+  | "staircase"
+  | "powder room"
+  | "home bar";
 
 export const rooms: RoomType[] = [
   "living room",
@@ -28,6 +34,7 @@ export const rooms: RoomType[] = [
   "family room",
   "breakfast nook",
   "library",
+  "sunroom",
   "bedroom",
   "nursery",
   "kitchen",
@@ -35,6 +42,7 @@ export const rooms: RoomType[] = [
   "foyer",
   "dining room",
   "basement",
+  "garage",
   "home office",
   "home gym",
   "theater room",
@@ -45,10 +53,14 @@ export const rooms: RoomType[] = [
   "mud room",
   "walk-in closet",
   "laundry room",
+  "hallway",
+  "staircase",
+  "powder room",
+  "home bar",
 ];
 
 export const views = [
-  "regular inner-city neighborhood",
+  "residential inner-city street with houses and mature landscaping",
   "suburban neighborhood street",
   "park courtyard",
   "forest",
@@ -69,11 +81,8 @@ export const styles = [
   "farmhouse",
   "transitional",
   "traditional",
-  "art deco",
-  "organic modern",
-  "quiet luxury",
+  "wabi-sabi",
   "eclectic",
-  "liminal spaces",
 ];
 
 export const walls = [
@@ -107,6 +116,7 @@ export const wallColorPalettes = [
 ];
 
 export const colorProfiles = [
+  "no fixed color palette (material-led)",
   "current balanced palette (default)",
   "rich color-forward palette",
   "high-contrast palette",
@@ -116,12 +126,49 @@ export const colorProfiles = [
 
 export const focalPoints = [
   "dramatic raw material wall (exposed concrete, brick, metal)",
+  "floor-to-ceiling room divider wall with integrated storage or millwork",
+  "wood-framed rectangular doorway with clean trim and warm natural grain",
+  "travertine-framed rectangular doorway with a simple stone surround",
+  "marble-framed curved doorway with a soft arch and minimal detailing",
+  "TV wall with integrated cabinetry and a clean media console below",
+  "indoor open-to-outdoor living space with sliding glass doors, integrated indoor-outdoor seating, and a seamless transition to the exterior",
+  "built-in wine wall with shelving and glass-front bottle storage",
+  "indoor planterium wall with layered greenery and integrated lighting",
+  "large dining table with a cluster of flowering plants as the centerpiece",
+  "dining table with a modern Thanksgiving-inspired table setting or an everyday dinner table setting, modest plated portions, and simple servingware (not a grand banquet)",
+  "kitchen countertop with everyday dinner styling, practical plates, and small realistic food details (not a ceremonial feast)",
+  "friendly pet dog lounging near the focal area as a lived-in lifestyle element",
+  "friendly pet cat perched or curled near the focal area as a lived-in lifestyle element",
+  "fall floral arrangement with warm-toned leaves, branches, and seasonal texture",
+  "small indoor tree plants with autumn foliage in sculptural planters",
+  "gallery wall of fall photography prints in coordinated frames",
+  "floor-to-ceiling marble wall with subtle veining and minimal trim",
+  "mirror tile wall made of small square mirrors set in a tight grid to form one large mirrored wall",
+  "single large seamless full-height mirror wall with minimal frame",
+  "French doors with slim-framed glass panes, a symmetrical double-door design, and soft natural light",
+  "regular floor lamp with a drum shade and warm ambient glow",
+  "hanging floor lamp with an elegant shade and soft layered light",
+  "clear glass divider wall with a warm wood frame and minimal profile",
+  "bookcase room divider with open shelving on both sides and a simple wood frame",
+  "metal divider wall with sculptural framing and slim linear detailing",
+  "bedroom fireplace wall with plaster or stone surround",
+  "kitchen fireplace as a backsplash feature with a simple framed surround",
+  "kitchen fireplace framed on the countertop with a clean built-in profile",
+  "kitchen fireplace integrated into the island with a centered linear fire feature",
+  "small cluster of cactus plants in ceramic or concrete planters",
+  "small potted tree in a simple ceramic or plaster planter",
+  "curtains with layered sheer panels and a tailored linen drape",
+  "curtains with a soft Roman shade and woven textured fabric",
+  "curtains with a dramatic full-length velvet drape",
+  "oversized abstract art or mural",
+  "gallery wall of framed photography and art prints",
+  "large architectural painting with a minimalist frame",
+  "mixed wall art arrangement with vintage and contemporary pieces",
   "suspended or floating sculptural installation",
   "asymmetrical architectural intervention",
   "kinetic or light-based art installation",
   "monolithic single-material statement wall",
   "ceiling-as-canvas (painted, textured, or sculptural)",
-  "oversized abstract art or mural",
   "radical geometric or angular architectural element",
   "unexpected material juxtaposition (marble meets rust, etc.)",
   "minimalist conceptual art piece",
@@ -143,6 +190,12 @@ export const ceilingLights = [
   "architectural pendant lights",
   "concealed cove lighting",
   "flush mount ceiling lights",
+  "linear suspension lights",
+  "industrial cage pendants",
+  "lantern or orb pendants",
+  "wall sconces with ambient glow",
+  "LED strip accent lighting",
+  "oversized drum shade pendants",
 ];
 
 export const roomSizes = [
@@ -190,6 +243,8 @@ export const heroColors = [
   "Jewel Tone Mixed",
   "Warm Mixed",
   "Cool Mixed",
+  "Pink Mixed",
+  "Purple Mixed",
 ] as const;
 
 export const legacyHeroColors = [

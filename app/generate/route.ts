@@ -32,7 +32,27 @@ import {
   walls,
   windowStyles,
 } from "@/lib/combinations";
+import {
+  accessoryOptionGroups,
+  buildAccessoryPrompt,
+  buildAccessorySafetyFallbackPrompt,
+  type AccessoryOptions,
+  type AccessoryScenario,
+} from "@/lib/accessoryCombinations";
+import {
+  exteriorOptionGroups,
+  photoTypes,
+  type ExteriorOptions,
+  type PhotoType,
+} from "@/lib/exteriorCombinations";
+import {
+  buildExteriorPrompt,
+  buildExteriorSafetyFallbackPrompt,
+  type ExteriorScenario,
+} from "@/lib/exteriorPromptBuilder";
 import { submitImageBatchJob } from "@/lib/openaiBatch";
+import { resolveWholeHouseShots } from "@/lib/wholeHouse";
+import { createPromptScenarioSamples } from "@/lib/promptScenarioSelection";
 import { buildPrompt } from "../../lib/promptBuilder";
 
 const OUTPUT_DIR = path.join(process.cwd(), "output");
@@ -40,6 +60,8 @@ const DEFAULT_MAX_PROMPTS = 12;
 const ABSOLUTE_MAX_PROMPTS = 200;
 const BATCH_MODE_THRESHOLD = 24;
 const CONCURRENCY = 4;
+const LARGE_RUN_PREFLIGHT_MIN_IMAGES = 25;
+const LARGE_RUN_PREFLIGHT_SAMPLE_SIZE = 8;
 const PRIMARY_IMAGE_MODEL = "gpt-image-2";
 const FALLBACK_IMAGE_MODEL = "gpt-image-1";
 const MAX_RATE_LIMIT_RETRIES = 5;
@@ -71,6 +93,7 @@ type GeneratePayload = {
   ceilingLights?: string[];
   roomSize?: string;
   designStyle?: string;
+  designStyles?: string[];
   colorMood?: string;
   colorIntensity?: number;
   colorPresence?: number;
@@ -81,13 +104,20 @@ type GeneratePayload = {
   homeQuality?: HomeQuality;
   wallColorPalette?: string;
   randomizeWallColor?: boolean;
+  runAsBatch?: boolean;
   fileSize?: FileSizeOption;
   aspectRatio?: AspectRatioOption;
   maxImages?: number;
+  photoTypes?: string[];
+  wholeHouse?: boolean;
+  wholeHouseShotIds?: string[];
+  exterior?: Partial<Record<keyof ExteriorOptions, string[]>>;
+  accessory?: Partial<Record<keyof AccessoryOptions, string[]>>;
 };
 
 type PromptScenario = {
   room: RoomType;
+  style: string;
   view: string;
   colorProfile: string;
   focalPoints: string[];
@@ -96,6 +126,11 @@ type PromptScenario = {
   ceiling: string;
   ceilingLight: string;
   wallColorPalette: string;
+};
+
+type PromptRequest = {
+  primaryPrompt: string;
+  safetyFallbackPrompt: string;
 };
 
 const FILE_SIZE_TO_QUALITY: Record<FileSizeOption, "low" | "medium" | "high"> = {
@@ -149,6 +184,43 @@ function extractErrorMessage(error: unknown): string {
     : "";
 }
 
+function looksLikeHtmlDocument(value: string): boolean {
+  return /<!doctype\s+html|<html\b|<head\b|<body\b/i.test(value);
+}
+
+function toClientSafeUpstreamMessage(message: string, status: number): string {
+  const trimmed = message.trim();
+
+  if (!trimmed) {
+    return `Image service request failed (status ${status}). Please try again.`;
+  }
+
+  if (!looksLikeHtmlDocument(trimmed)) {
+    return trimmed;
+  }
+
+  if (status === 429) {
+    return "Image service is rate-limited right now. Please try again shortly.";
+  }
+
+  if (status === 401 || status === 403) {
+    return "Image service rejected this request. Check API key, billing, and prompt safety settings.";
+  }
+
+  return `Image service returned an unexpected HTML error page (status ${status}). Please try again.`;
+}
+
+function isSafetyViolationError(error: unknown): boolean {
+  const message = extractErrorMessage(error).toLowerCase();
+
+  return (
+    message.includes("safety") ||
+    message.includes("safety system") ||
+    message.includes("safety_violations") ||
+    message.includes("sexual")
+  );
+}
+
 function isRateLimitError(error: unknown): boolean {
   return typeof error === "object" &&
     error !== null &&
@@ -179,6 +251,19 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
+export function shouldUseBatchModeForImageGeneration(
+  maxImages: number,
+  model: string,
+  batchRequested?: boolean
+): boolean {
+  if (model !== PRIMARY_IMAGE_MODEL) {
+    return false;
+  }
+
+  // An explicit choice wins; the size threshold only applies when none was sent.
+  return batchRequested ?? maxImages > BATCH_MODE_THRESHOLD;
+}
+
 function pickRandomItem<T>(items: T[], random: () => number = Math.random): T {
   return items[Math.floor(random() * items.length)] as T;
 }
@@ -204,6 +289,8 @@ function validateGeneratePayloadShape(payload: unknown): string[] {
     "walls",
     "ceilings",
     "ceilingLights",
+    "photoTypes",
+    "wholeHouseShotIds",
   ] as const;
 
   arrayFields.forEach((field) => {
@@ -211,6 +298,38 @@ function validateGeneratePayloadShape(payload: unknown): string[] {
       errors.push(`${field} must be an array of strings.`);
     }
   });
+
+  if ("exterior" in input && input.exterior !== undefined) {
+    const exterior = input.exterior;
+
+    if (exterior === null || typeof exterior !== "object" || Array.isArray(exterior)) {
+      errors.push("exterior must be an object.");
+    } else {
+      exteriorOptionGroups.forEach(({ key }) => {
+        const value = (exterior as Record<string, unknown>)[key];
+
+        if (value !== undefined && !isStringArray(value)) {
+          errors.push(`exterior.${key} must be an array of strings.`);
+        }
+      });
+    }
+  }
+
+  if ("accessory" in input && input.accessory !== undefined) {
+    const accessory = input.accessory;
+
+    if (accessory === null || typeof accessory !== "object" || Array.isArray(accessory)) {
+      errors.push("accessory must be an object.");
+    } else {
+      accessoryOptionGroups.forEach(({ key }) => {
+        const value = (accessory as Record<string, unknown>)[key];
+
+        if (value !== undefined && !isStringArray(value)) {
+          errors.push(`accessory.${key} must be an array of strings.`);
+        }
+      });
+    }
+  }
 
   const stringFields = [
     "roomSize",
@@ -256,6 +375,14 @@ function validateGeneratePayloadShape(payload: unknown): string[] {
   }
 
   if (
+    "runAsBatch" in input &&
+    input.runAsBatch !== undefined &&
+    typeof input.runAsBatch !== "boolean"
+  ) {
+    errors.push("runAsBatch must be a boolean.");
+  }
+
+  if (
     "randomizeWallColor" in input &&
     input.randomizeWallColor !== undefined &&
     typeof input.randomizeWallColor !== "boolean"
@@ -276,6 +403,17 @@ function validateGeneratePayloadShape(payload: unknown): string[] {
 
 function getDefaultWallColorPalette(colorProfileSelection: string[]): string {
   const selectedProfiles = new Set(colorProfileSelection);
+  const noFixedPaletteSelection =
+    colorProfileSelection.length === 1 &&
+    selectedProfiles.has("no fixed color palette (material-led)");
+
+  if (noFixedPaletteSelection) {
+    return (
+      wallColorPalettes.find((palette) => palette.includes("balanced modern mix")) ??
+      "balanced modern mix (white, warm gray, dusty blue, pure charcoal)"
+    );
+  }
+
   const earthyOnlySelection =
     colorProfileSelection.length === 1 &&
     selectedProfiles.has("earthy saturated palette");
@@ -347,6 +485,14 @@ function normalizePaletteFamilyFromPayload(heroColor: string | undefined): HeroC
 
 function getWallColorRandomPoolByProfile(colorProfileSelection: string[]): string[] {
   const selectedProfiles = new Set(colorProfileSelection);
+  const noFixedPaletteSelection =
+    colorProfileSelection.length === 1 &&
+    selectedProfiles.has("no fixed color palette (material-led)");
+
+  if (noFixedPaletteSelection) {
+    return wallColorPalettes;
+  }
+
   const earthyOnlySelection =
     colorProfileSelection.length === 1 &&
     selectedProfiles.has("earthy saturated palette");
@@ -386,7 +532,7 @@ function createSeededRandom(seed: number): () => number {
 
   return () => {
     state = Math.imul(state, 1664525) + 1013904223;
-    return ((state >>> 0) & 0xffffffff) / 0x100000000;
+    return (state >>> 0) / 0x100000000;
   };
 }
 
@@ -449,6 +595,8 @@ async function generateWithRateLimitRetry(input: {
           }
         }
 
+        message = toClientSafeUpstreamMessage(message, response.status);
+
         const error = new Error(message) as Error & { status?: number };
         error.status = response.status;
         throw error;
@@ -498,6 +646,41 @@ async function generateImageWithFallback(
       size: fallbackSize,
     });
   }
+}
+
+function buildSafetyFallbackPrompt(input: {
+  room: RoomType;
+  roomSize: string;
+  style: string;
+  homeQuality: HomeQuality;
+  colorMood: ColorMood;
+  colorCoverage: ColorCoverage;
+  wallColorPalette: string;
+  colorProfile: string;
+  view: string;
+  windowStyle: string;
+  wall: string;
+  ceiling: string;
+  ceilingLight: string;
+  focalPoints: string[];
+  index: number;
+  maxImages: number;
+}): string {
+  const focalPointDirection =
+    input.focalPoints.length > 0
+      ? input.focalPoints.join(", ")
+      : "subtle decor focal points";
+
+  return `Photorealistic ${input.style} ${input.room} interior design photograph.
+Room size: ${input.roomSize}. Home quality: ${input.homeQuality}.
+Color direction: ${input.colorMood}; coverage ${input.colorCoverage}; wall palette ${input.wallColorPalette}; profile ${input.colorProfile}.
+Architecture and materials: ${input.wall}; ${input.ceiling}; ${input.windowStyle}; ${input.ceilingLight}.
+Focal point direction: ${focalPointDirection}.
+Exterior view: ${input.view}.
+Interior architecture and decor only; no people or character-like subjects.
+Clean realistic residential composition, bright daylight, no surreal themes.
+
+Variation ${input.index + 1} of ${input.maxImages}.`;
 }
 
 export async function POST(request: Request) {
@@ -632,10 +815,28 @@ export async function POST(request: Request) {
         ? payload.roomSize
         : (roomSizes[1] ?? "standard room (180-280 sq ft)");
 
+    const selectedDesignStyles =
+      Array.isArray(payload.designStyles)
+        ? payload.designStyles.filter(
+            (style): style is string => typeof style === "string" && styles.includes(style)
+          )
+        : [];
+
     const styleSelection =
-      typeof payload.designStyle === "string" && styles.includes(payload.designStyle)
-        ? payload.designStyle
-        : (styles[0] ?? "modern");
+      selectedDesignStyles.length > 0
+        ? selectedDesignStyles.join(", ")
+        : typeof payload.designStyle === "string" && styles.includes(payload.designStyle)
+          ? payload.designStyle
+          : (styles[0] ?? "modern");
+
+    const styleOptions =
+      selectedDesignStyles.length > 0
+        ? [...new Set(selectedDesignStyles)]
+        : [
+            typeof payload.designStyle === "string" && styles.includes(payload.designStyle)
+              ? payload.designStyle
+              : (styles[0] ?? "modern"),
+          ];
 
     const colorMoodSelection: ColorMood =
       typeof payload.colorMood === "string" &&
@@ -693,16 +894,69 @@ export async function POST(request: Request) {
     const randomizeWallColor = payload.randomizeWallColor === true;
     const randomRunSalt = randomizeWallColor ? `${Date.now()}-${Math.random()}` : "stable";
 
-    const maxImages =
-      typeof payload.maxImages === "number" && Number.isInteger(payload.maxImages)
+    const wholeHouse = payload.wholeHouse === true;
+    const wholeHouseShotSelection = resolveWholeHouseShots(payload.wholeHouseShotIds);
+
+    const maxImages = wholeHouse
+      ? wholeHouseShotSelection.length
+      : typeof payload.maxImages === "number" && Number.isInteger(payload.maxImages)
         ? Math.max(1, Math.min(payload.maxImages, ABSOLUTE_MAX_PROMPTS))
         : DEFAULT_MAX_PROMPTS;
 
+    const requestedPhotoTypes = Array.isArray(payload.photoTypes)
+      ? photoTypes.filter((type) => payload.photoTypes?.includes(type))
+      : [];
+    const photoTypeSelection: PhotoType[] =
+      requestedPhotoTypes.length > 0 ? requestedPhotoTypes : ["interior"];
+    const includeExterior = photoTypeSelection.includes("exterior");
+    const includeAccessory = photoTypeSelection.includes("accessory");
+
+    // Split images evenly across selected types; leftovers go to the earlier types.
+    const photoTypeCounts = Object.fromEntries(
+      photoTypeSelection.map((type, typeIndex) => [
+        type,
+        Math.floor(maxImages / photoTypeSelection.length) +
+          (typeIndex < maxImages % photoTypeSelection.length ? 1 : 0),
+      ])
+    ) as Partial<Record<PhotoType, number>>;
+    const interiorCount = wholeHouse ? 0 : (photoTypeCounts.interior ?? 0);
+    const exteriorCount = wholeHouse ? 0 : (photoTypeCounts.exterior ?? 0);
+    const accessoryCount = wholeHouse ? 0 : (photoTypeCounts.accessory ?? 0);
+
+    const exteriorSelections = Object.fromEntries(
+      exteriorOptionGroups.map(({ key, options }) => {
+        const requested = payload.exterior?.[key];
+        const valid = Array.isArray(requested)
+          ? requested.filter((value) => options.includes(value))
+          : [];
+
+        return [key, valid.length > 0 ? valid : options];
+      })
+    ) as unknown as ExteriorOptions;
+
+    const accessorySelections = Object.fromEntries(
+      accessoryOptionGroups.map(({ key, options }) => {
+        const requested = payload.accessory?.[key];
+        const valid = Array.isArray(requested)
+          ? requested.filter((value) => options.includes(value))
+          : [];
+
+        return [key, valid.length > 0 ? valid : options];
+      })
+    ) as unknown as AccessoryOptions;
+
+    const exteriorSelectionsForSeed = includeExterior ? exteriorSelections : null;
+    const accessorySelectionsForSeed = includeAccessory ? accessorySelections : null;
     const quality = FILE_SIZE_TO_QUALITY[fileSize];
     const size = FILE_SIZE_AND_ASPECT_TO_SIZE[fileSize][aspectRatio];
     const fallbackSize = FALLBACK_ASPECT_RATIO_TO_SIZE[aspectRatio];
 
     const seedInput = JSON.stringify({
+      wholeHouse,
+      wholeHouseShotIds: wholeHouse ? wholeHouseShotSelection.map((shot) => shot.id) : null,
+      photoTypeSelection,
+      exteriorSelectionsForSeed,
+      accessorySelectionsForSeed,
       roomSelection,
       viewSelection,
       colorProfileSelection,
@@ -729,97 +983,43 @@ export async function POST(request: Request) {
 
     const seededRandom = createSeededRandom(hashStringToSeed(seedInput));
 
-    const scenariosByRoom: PromptScenario[][] = roomSelection.map((room) =>
-      viewSelection.flatMap((view) =>
-        colorProfileSelection.flatMap((colorProfile) =>
+    // One style per image, shuffled in rounds so each selected style is used evenly.
+    const styleDeck: string[] = [];
+    while (styleDeck.length < maxImages) {
+      styleDeck.push(...shuffleArray(styleOptions, seededRandom));
+    }
+
+    const scenarios = createPromptScenarioSamples(
+      roomSelection,
+      interiorCount,
+      (room, index) => ({
+        room,
+        style: styleDeck[index] ?? styleOptions[0] ?? "modern",
+        view: pickRandomItem(viewSelection, seededRandom),
+        colorProfile: pickRandomItem(colorProfileSelection, seededRandom),
+        focalPoints:
           focalPointSelection.length > 0
-            ? focalPointSelection.flatMap((focalPoint) =>
-                windowSelection.flatMap((windowStyle) =>
-                  wallSelection.flatMap((wall) =>
-                    ceilingSelection.flatMap((ceiling) =>
-                      ceilingLightSelection.map((ceilingLight) => ({
-                        room,
-                        view,
-                        colorProfile,
-                        focalPoints: [focalPoint],
-                        windowStyle,
-                        wall,
-                        ceiling,
-                        ceilingLight,
-                        wallColorPalette: randomizeWallColor
-                          ? pickRandomItem(
-                              getWallColorRandomPoolByProfile(colorProfileSelection),
-                              seededRandom
-                            )
-                          : wallColorPaletteSelection,
-                      }))
-                    )
-                  )
-                )
-              )
-            : windowSelection.flatMap((windowStyle) =>
-                wallSelection.flatMap((wall) =>
-                  ceilingSelection.flatMap((ceiling) =>
-                    ceilingLightSelection.map((ceilingLight) => ({
-                      room,
-                      view,
-                      colorProfile,
-                      focalPoints: [],
-                      windowStyle,
-                      wall,
-                      ceiling,
-                      ceilingLight,
-                      wallColorPalette: randomizeWallColor
-                        ? pickRandomItem(
-                            getWallColorRandomPoolByProfile(colorProfileSelection),
-                            seededRandom
-                          )
-                        : wallColorPaletteSelection,
-                    }))
-                  )
-                )
-              )
-        )
-      )
+            ? [pickRandomItem(focalPointSelection, seededRandom)]
+            : [],
+        windowStyle: pickRandomItem(windowSelection, seededRandom),
+        wall: pickRandomItem(wallSelection, seededRandom),
+        ceiling: pickRandomItem(ceilingSelection, seededRandom),
+        ceilingLight: pickRandomItem(ceilingLightSelection, seededRandom),
+        wallColorPalette: randomizeWallColor
+          ? pickRandomItem(
+              getWallColorRandomPoolByProfile(colorProfileSelection),
+              seededRandom
+            )
+          : wallColorPaletteSelection,
+      }),
+      seededRandom
     );
 
-    const maxRoomPromptLength = scenariosByRoom.reduce(
-      (maxLength, roomPrompts) => Math.max(maxLength, roomPrompts.length),
-      0
-    );
-
-    const baseScenarios: PromptScenario[] = [];
-
-    for (let index = 0; index < maxRoomPromptLength; index += 1) {
-      scenariosByRoom.forEach((roomScenarios) => {
-        const scenario = roomScenarios[index];
-
-        if (scenario) {
-          baseScenarios.push(scenario);
-        }
-      });
-    }
-
-    if (baseScenarios.length === 0) {
-      throw new Error("No prompts could be generated from the selected options");
-    }
-
-    const shuffledScenarios = shuffleArray(baseScenarios, seededRandom);
-
-    const prompts = Array.from({ length: maxImages }, (_, index) => {
-      const fallbackScenario = baseScenarios[0];
-      const scenario =
-        shuffledScenarios[index % Math.max(1, shuffledScenarios.length)] ??
-        fallbackScenario;
-
-      if (!scenario) {
-        throw new Error("Unable to select a prompt scenario");
-      }
-
+    const promptRequests: PromptRequest[] = scenarios.map((scenario, index) => {
       const prompt = buildPrompt(
         scenario.room,
         roomSizeSelection,
-        styleSelection,
+        scenario.style,
         colorMoodSelection,
         colorIntensitySelection,
         colorStrategySelection,
@@ -827,7 +1027,7 @@ export async function POST(request: Request) {
         heroColorSelection,
         autoPaletteVariation,
         autoPaletteVariation ? index : 0,
-        maxImages,
+        interiorCount,
         homeQualitySelection,
         scenario.wallColorPalette,
         [scenario.colorProfile],
@@ -839,12 +1039,229 @@ export async function POST(request: Request) {
         [scenario.ceilingLight]
       );
 
-      return `${prompt}\n\nVariation ${index + 1} of ${maxImages}.`;
+      return {
+        primaryPrompt: `${prompt}\n\nVariation ${index + 1} of ${interiorCount}.`,
+        safetyFallbackPrompt: buildSafetyFallbackPrompt({
+          room: scenario.room,
+          roomSize: roomSizeSelection,
+          style: scenario.style,
+          homeQuality: homeQualitySelection,
+          colorMood: colorMoodSelection,
+          colorCoverage: colorCoverageSelection,
+          wallColorPalette: scenario.wallColorPalette,
+          colorProfile: scenario.colorProfile,
+          view: scenario.view,
+          windowStyle: scenario.windowStyle,
+          wall: scenario.wall,
+          ceiling: scenario.ceiling,
+          ceilingLight: scenario.ceilingLight,
+          focalPoints: scenario.focalPoints,
+          index,
+          maxImages: interiorCount,
+        }),
+      };
     });
 
-    if (maxImages > BATCH_MODE_THRESHOLD) {
+    const exteriorScenarios: ExteriorScenario[] = Array.from(
+      { length: exteriorCount },
+      () => ({
+        homeStyle: pickRandomItem(exteriorSelections.homeStyles, seededRandom),
+        facadeMaterial: pickRandomItem(exteriorSelections.facadeMaterials, seededRandom),
+        roofStyle: pickRandomItem(exteriorSelections.roofStyles, seededRandom),
+        frontDoor: pickRandomItem(exteriorSelections.frontDoors, seededRandom),
+        landscaping: pickRandomItem(exteriorSelections.landscaping, seededRandom),
+        drivewayWalkway: pickRandomItem(exteriorSelections.drivewayWalkways, seededRandom),
+        timeOfDay: pickRandomItem(exteriorSelections.timesOfDay, seededRandom),
+        cameraView: pickRandomItem(exteriorSelections.cameraViews, seededRandom),
+        garage: pickRandomItem(exteriorSelections.garages, seededRandom),
+      })
+    );
+
+    exteriorScenarios.forEach((scenario, index) => {
+      promptRequests.push({
+        primaryPrompt: buildExteriorPrompt(
+          scenario,
+          homeQualitySelection,
+          index,
+          exteriorCount
+        ),
+        safetyFallbackPrompt: buildExteriorSafetyFallbackPrompt(
+          scenario,
+          index,
+          exteriorCount
+        ),
+      });
+    });
+
+    const accessoryScenarios: AccessoryScenario[] = Array.from(
+      { length: accessoryCount },
+      () => ({
+        item: pickRandomItem(accessorySelections.items, seededRandom),
+        material: pickRandomItem(accessorySelections.materials, seededRandom),
+        setting: pickRandomItem(accessorySelections.settings, seededRandom),
+        lighting: pickRandomItem(accessorySelections.lighting, seededRandom),
+        framing: pickRandomItem(accessorySelections.framing, seededRandom),
+      })
+    );
+
+    accessoryScenarios.forEach((scenario, index) => {
+      promptRequests.push({
+        primaryPrompt: buildAccessoryPrompt(
+          scenario,
+          styleDeck[index] ?? styleOptions[0] ?? "modern",
+          homeQualitySelection,
+          index,
+          accessoryCount
+        ),
+        safetyFallbackPrompt: buildAccessorySafetyFallbackPrompt(
+          scenario,
+          index,
+          accessoryCount
+        ),
+      });
+    });
+
+    if (wholeHouse) {
+      // Every choice below is made once so all rooms read as the same home.
+      const houseStyle = pickRandomItem(styleOptions, seededRandom);
+      const houseColorProfile = pickRandomItem(colorProfileSelection, seededRandom);
+      const houseWindow = pickRandomItem(windowSelection, seededRandom);
+      const houseWall = pickRandomItem(wallSelection, seededRandom);
+      const houseCeiling = pickRandomItem(ceilingSelection, seededRandom);
+      // Fixtures vary room to room: deal from a shuffled deck so none repeat until all are used.
+      let ceilingLightDeck: string[] = [];
+      const nextCeilingLight = (): string => {
+        if (ceilingLightDeck.length === 0) {
+          ceilingLightDeck = shuffleArray(ceilingLightSelection, seededRandom);
+        }
+
+        return ceilingLightDeck.pop() ?? ceilingLightSelection[0] ?? "recessed downlights";
+      };
+      const houseView = pickRandomItem(viewSelection, seededRandom);
+      const houseWallPalette = randomizeWallColor
+        ? pickRandomItem(getWallColorRandomPoolByProfile(colorProfileSelection), seededRandom)
+        : wallColorPaletteSelection;
+      const houseExterior: ExteriorScenario = {
+        homeStyle: pickRandomItem(exteriorSelections.homeStyles, seededRandom),
+        facadeMaterial: pickRandomItem(exteriorSelections.facadeMaterials, seededRandom),
+        roofStyle: pickRandomItem(exteriorSelections.roofStyles, seededRandom),
+        frontDoor: pickRandomItem(exteriorSelections.frontDoors, seededRandom),
+        landscaping: pickRandomItem(exteriorSelections.landscaping, seededRandom),
+        drivewayWalkway: pickRandomItem(exteriorSelections.drivewayWalkways, seededRandom),
+        timeOfDay: pickRandomItem(exteriorSelections.timesOfDay, seededRandom),
+        cameraView: "",
+        garage: pickRandomItem(exteriorSelections.garages, seededRandom),
+      };
+
+      wholeHouseShotSelection.forEach((shot, index) => {
+        const consistencyNote = `Whole-house consistency (critical): this is the ${shot.label} of ONE single cohesive ${houseStyle} home that also contains a ${houseExterior.facadeMaterial} exterior. Keep the same design style, color palette, wall finishes, flooring, trim, and hardware used throughout the entire house. Choose the light fixtures to suit this specific room; do not reuse the same fixture design as other rooms.`;
+
+        if (shot.kind === "accessory") {
+          const scenario: AccessoryScenario = {
+            item: shot.item,
+            material: pickRandomItem(accessorySelections.materials, seededRandom),
+            setting: pickRandomItem(accessorySelections.settings, seededRandom),
+            lighting: pickRandomItem(accessorySelections.lighting, seededRandom),
+            framing: pickRandomItem(accessorySelections.framing, seededRandom),
+          };
+
+          promptRequests.push({
+            primaryPrompt: `${buildAccessoryPrompt(
+              scenario,
+              houseStyle,
+              homeQualitySelection,
+              index,
+              maxImages
+            )}\n\n${consistencyNote}`,
+            safetyFallbackPrompt: buildAccessorySafetyFallbackPrompt(
+              scenario,
+              index,
+              maxImages
+            ),
+          });
+          return;
+        }
+
+        if (shot.kind === "exterior") {
+          const scenario = { ...houseExterior, cameraView: shot.cameraView };
+
+          promptRequests.push({
+            primaryPrompt: `${buildExteriorPrompt(
+              scenario,
+              homeQualitySelection,
+              index,
+              maxImages
+            )}\n\n${consistencyNote}`,
+            safetyFallbackPrompt: buildExteriorSafetyFallbackPrompt(
+              scenario,
+              index,
+              maxImages
+            ),
+          });
+          return;
+        }
+
+        const focalPoints =
+          focalPointSelection.length > 0
+            ? [pickRandomItem(focalPointSelection, seededRandom)]
+            : [];
+        const shotCeilingLight = nextCeilingLight();
+        const prompt = buildPrompt(
+          shot.room,
+          roomSizeSelection,
+          houseStyle,
+          colorMoodSelection,
+          colorIntensitySelection,
+          colorStrategySelection,
+          colorCoverageSelection,
+          heroColorSelection,
+          false,
+          0,
+          maxImages,
+          homeQualitySelection,
+          houseWallPalette,
+          [houseColorProfile],
+          houseView,
+          [houseWindow],
+          focalPoints,
+          [houseWall],
+          [houseCeiling],
+          [shotCeilingLight]
+        );
+
+        promptRequests.push({
+          primaryPrompt: `${prompt}\n\n${consistencyNote}\n\nVariation ${index + 1} of ${maxImages}.`,
+          safetyFallbackPrompt: buildSafetyFallbackPrompt({
+            room: shot.room,
+            roomSize: roomSizeSelection,
+            style: houseStyle,
+            homeQuality: homeQualitySelection,
+            colorMood: colorMoodSelection,
+            colorCoverage: colorCoverageSelection,
+            wallColorPalette: houseWallPalette,
+            colorProfile: houseColorProfile,
+            view: houseView,
+            windowStyle: houseWindow,
+            wall: houseWall,
+            ceiling: houseCeiling,
+            ceilingLight: shotCeilingLight,
+            focalPoints,
+            index,
+            maxImages,
+          }),
+        });
+      });
+    }
+
+    if (
+      shouldUseBatchModeForImageGeneration(
+        maxImages,
+        PRIMARY_IMAGE_MODEL,
+        payload.runAsBatch === true
+      )
+    ) {
       const submittedBatch = await submitImageBatchJob({
-        prompts,
+        prompts: promptRequests.map((entry) => entry.primaryPrompt),
         model: PRIMARY_IMAGE_MODEL,
         quality,
         size,
@@ -861,17 +1278,114 @@ export async function POST(request: Request) {
       });
     }
 
+    const processPromptRequests = async (
+      requests: PromptRequest[]
+    ): Promise<{ results: ImagesResponse[]; finalSafetyFiltered: number }> => {
+      const runResults: ImagesResponse[] = [];
+      const safetyRetryQueue: string[] = [];
+      let runFinalSafetyFiltered = 0;
+
+      for (let i = 0; i < requests.length; i += CONCURRENCY) {
+        const batch = requests.slice(i, i + CONCURRENCY);
+        const batchResults = await Promise.allSettled(
+          batch.map((promptRequest) =>
+            generateImageWithFallback(
+              promptRequest.primaryPrompt,
+              quality,
+              size,
+              fallbackSize
+            )
+          )
+        );
+
+        batchResults.forEach((result, batchIndex) => {
+          if (result.status === "fulfilled") {
+            runResults.push(result.value);
+            return;
+          }
+
+          if (isSafetyViolationError(result.reason)) {
+            const promptRequest = batch[batchIndex];
+
+            if (promptRequest) {
+              safetyRetryQueue.push(promptRequest.safetyFallbackPrompt);
+            }
+
+            return;
+          }
+
+          throw result.reason;
+        });
+      }
+
+      for (let i = 0; i < safetyRetryQueue.length; i += CONCURRENCY) {
+        const batch = safetyRetryQueue.slice(i, i + CONCURRENCY);
+        const batchResults = await Promise.allSettled(
+          batch.map((prompt) =>
+            generateImageWithFallback(prompt, quality, size, fallbackSize)
+          )
+        );
+
+        batchResults.forEach((result) => {
+          if (result.status === "fulfilled") {
+            runResults.push(result.value);
+            return;
+          }
+
+          if (isSafetyViolationError(result.reason)) {
+            runFinalSafetyFiltered += 1;
+            return;
+          }
+
+          throw result.reason;
+        });
+      }
+
+      return { results: runResults, finalSafetyFiltered: runFinalSafetyFiltered };
+    };
+
+    const shouldRunPreflight = maxImages >= LARGE_RUN_PREFLIGHT_MIN_IMAGES;
+    const preflightSample = shouldRunPreflight
+      ? promptRequests.slice(0, LARGE_RUN_PREFLIGHT_SAMPLE_SIZE)
+      : [];
+
+    const remainingRequests = shouldRunPreflight
+      ? promptRequests.slice(LARGE_RUN_PREFLIGHT_SAMPLE_SIZE)
+      : promptRequests;
+
     const results: ImagesResponse[] = [];
+    let finalSafetyFiltered = 0;
 
-    for (let i = 0; i < prompts.length; i += CONCURRENCY) {
-      const batch = prompts.slice(i, i + CONCURRENCY);
-      const batchResults = await Promise.all(
-        batch.map((prompt) =>
-          generateImageWithFallback(prompt, quality, size, fallbackSize)
-        )
+    if (preflightSample.length > 0) {
+      const preflight = await processPromptRequests(preflightSample);
+      results.push(...preflight.results);
+      finalSafetyFiltered += preflight.finalSafetyFiltered;
+
+      if (preflight.results.length === 0) {
+        const costGuardError = new Error(
+          "Large-run preflight failed: sampled prompts were filtered by safety checks. Adjust focal points or generate a smaller batch first to avoid extra charges."
+        ) as Error & { status?: number };
+        costGuardError.status = 422;
+        throw costGuardError;
+      }
+    }
+
+    if (remainingRequests.length > 0) {
+      const remaining = await processPromptRequests(remainingRequests);
+      results.push(...remaining.results);
+      finalSafetyFiltered += remaining.finalSafetyFiltered;
+    }
+
+    if (results.length === 0) {
+      throw new Error(
+        "All prompt variations were rejected by the safety system. Try reducing max images or removing risky focal points."
       );
+    }
 
-      results.push(...batchResults);
+    if (finalSafetyFiltered > 0) {
+      console.warn(
+        `Filtered ${finalSafetyFiltered} prompt variation(s) after safety fallback retry.`
+      );
     }
 
     await mkdir(OUTPUT_DIR, { recursive: true });
