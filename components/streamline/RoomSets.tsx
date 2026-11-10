@@ -8,7 +8,7 @@ import {
   planRoomSets,
   usesRoomSets,
 } from "@/lib/roomSets";
-import type { Setup } from "@/lib/setup";
+import { interiorImageCount, type Setup } from "@/lib/setup";
 import { CheckboxField, SelectField } from "./fields";
 
 type RoomSetsProps = {
@@ -23,12 +23,13 @@ const ANGLE_CHOICES = Array.from({ length: MAX_ANGLES }, (_, index) => index + 1
  * one house. Both build later images from an earlier one, so they run one image after another.
  */
 export function RoomSets({ setup, update }: RoomSetsProps) {
-  const { rooms, maxImages, roomSplitMode, roomCounts, anglesPerRoom, sameHouse } = setup;
+  const { rooms, maxImages: totalImages, roomSplitMode, roomCounts, anglesPerRoom, sameHouse } = setup;
+  const maxImages = interiorImageCount(setup);
   const counts =
     roomSplitMode === "custom" && rooms.length >= 2 ? roomCounts : evenSplit(rooms, maxImages);
   const sets = planRoomSets(rooms, counts, anglesPerRoom);
   const summary = describeSets(sets, anglesPerRoom, sameHouse);
-  const limit = liveLimitMessage(maxImages, anglesPerRoom, sameHouse);
+  const limit = liveLimitMessage(totalImages, anglesPerRoom, sameHouse);
   const active = usesRoomSets(anglesPerRoom, sameHouse);
 
   return (

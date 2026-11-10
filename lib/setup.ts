@@ -27,6 +27,14 @@ import {
   type HeroColor,
   type RoomType,
 } from "./combinations";
+import {
+  createEmptyExteriorOptions,
+  effectivePhotoTypes,
+  photoTypeCounts,
+  exteriorOptionGroups,
+  type ExteriorOptions,
+  type PhotoType,
+} from "./exteriorCombinations";
 import type { RoomCounts } from "./roomMix";
 import { MAX_ANGLES } from "./roomSets";
 
@@ -75,6 +83,10 @@ export type Setup = {
   anglesPerRoom: number;
   /** Rooms made to look like one house: shared style, palette and finishes. */
   sameHouse: boolean;
+  /** What the run makes: interior rooms, exterior photos of the home, or both (images are split evenly). */
+  photoTypes: PhotoType[];
+  /** Exterior choices. A group with nothing picked uses every option. */
+  exterior: ExteriorOptions;
 };
 
 export type RoomSplitMode = "even" | "custom";
@@ -111,6 +123,8 @@ export const DEFAULT_SETUP: Setup = {
   roomCounts: {},
   anglesPerRoom: 1,
   sameHouse: false,
+  photoTypes: ["interior"],
+  exterior: createEmptyExteriorOptions(),
 };
 
 /** The styles a run uses: the picked ones, or the default style when none is picked. */
@@ -169,7 +183,21 @@ export function buildGeneratePayload(setup: Setup) {
     // Only sent when set, so the default payload stays exactly what it was before room sets existed.
     ...(setup.anglesPerRoom > 1 ? { anglesPerRoom: setup.anglesPerRoom } : {}),
     ...(setup.sameHouse ? { sameHouse: true } : {}),
+    // Only sent when exterior photos are on, so the default payload stays what it was before photo types existed.
+    ...(effectivePhotoTypes(setup.photoTypes).includes("exterior")
+      ? { photoTypes: effectivePhotoTypes(setup.photoTypes), exterior: setup.exterior }
+      : {}),
   };
+}
+
+/** How many of a run's images are interior rooms (all of them unless exterior photos are on). */
+export function interiorImageCount(setup: Pick<Setup, "maxImages" | "photoTypes">): number {
+  return photoTypeCounts(setup.maxImages, setup.photoTypes).interior;
+}
+
+/** How many of a run's images are exterior photos. */
+export function exteriorImageCount(setup: Pick<Setup, "maxImages" | "photoTypes">): number {
+  return photoTypeCounts(setup.maxImages, setup.photoTypes).exterior;
 }
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
@@ -243,7 +271,21 @@ export function sanitizeSetup(raw: unknown): Setup {
         ? source.anglesPerRoom
         : d.anglesPerRoom,
     sameHouse: typeof source.sameHouse === "boolean" ? source.sameHouse : d.sameHouse,
+    photoTypes: Array.isArray(source.photoTypes) ? effectivePhotoTypes(source.photoTypes as string[]) : d.photoTypes,
+    exterior: sanitizeExterior(source.exterior),
   };
+}
+
+/** Reads saved exterior choices, keeping only known options. Nothing picked stays empty (every option). */
+function sanitizeExterior(raw: unknown): ExteriorOptions {
+  const source = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
+  const exterior = createEmptyExteriorOptions();
+
+  for (const { key, options } of exteriorOptionGroups) {
+    exterior[key] = listOf(source[key], options, []);
+  }
+
+  return exterior;
 }
 
 function sanitizeRoomSplit(

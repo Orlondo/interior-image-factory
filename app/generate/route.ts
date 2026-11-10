@@ -39,6 +39,12 @@ import {
   writeCompletedBatch,
   writePendingManifest,
 } from "@/lib/batchManifest";
+import {
+  exteriorOptionGroups,
+  photoTypeCounts,
+  resolveExteriorOptions,
+} from "@/lib/exteriorCombinations";
+import { buildExteriorPrompt, buildExteriorScenarios } from "@/lib/exteriorPromptBuilder";
 import { assignStyles, buildScenarioPlan, type PromptScenario } from "@/lib/scenarioPlan";
 import { cameraAngleFor } from "@/lib/promptBuilder/camera";
 import {
@@ -98,6 +104,8 @@ type GeneratePayload = {
   roomSize?: string;
   designStyle?: string;
   designStyles?: string[];
+  photoTypes?: string[];
+  exterior?: Record<string, string[]>;
   colorMood?: string;
   colorIntensity?: number;
   colorPresence?: number;
@@ -227,6 +235,7 @@ function validateGeneratePayloadShape(payload: unknown): string[] {
     "ceilings",
     "ceilingLights",
     "designStyles",
+    "photoTypes",
   ] as const;
 
   arrayFields.forEach((field) => {
@@ -297,6 +306,22 @@ function validateGeneratePayloadShape(payload: unknown): string[] {
       input.anglesPerRoom > MAX_ANGLES)
   ) {
     errors.push(`anglesPerRoom must be a whole number from 1 to ${MAX_ANGLES}.`);
+  }
+
+  if ("exterior" in input && input.exterior !== undefined) {
+    const exterior = input.exterior as unknown;
+
+    if (exterior === null || typeof exterior !== "object" || Array.isArray(exterior)) {
+      errors.push("exterior must be an object.");
+    } else {
+      exteriorOptionGroups.forEach(({ key }) => {
+        const value = (exterior as Record<string, unknown>)[key];
+
+        if (value !== undefined && !isStringArray(value)) {
+          errors.push(`exterior.${key} must be an array of strings.`);
+        }
+      });
+    }
   }
 
   if (
@@ -752,8 +777,15 @@ export async function POST(request: Request) {
         ? Math.max(1, Math.min(payload.maxImages, ABSOLUTE_MAX_PROMPTS))
         : DEFAULT_MAX_PROMPTS;
 
-    if (payload.roomCounts !== undefined) {
-      const roomCountsError = validateRoomCounts(payload.roomCounts, roomSelection, maxImages);
+    // Photo types split the run's images evenly. Everything below that concerns rooms works on the
+    // interior share only; exterior photos are added to the same run afterwards.
+    const photoTypeSplit = photoTypeCounts(maxImages, payload.photoTypes);
+    const interiorCount = photoTypeSplit.interior;
+    const exteriorCount = photoTypeSplit.exterior;
+    const exteriorSelection = resolveExteriorOptions(payload.exterior);
+
+    if (payload.roomCounts !== undefined && interiorCount > 0) {
+      const roomCountsError = validateRoomCounts(payload.roomCounts, roomSelection, interiorCount);
 
       if (roomCountsError) {
         return NextResponse.json(
@@ -765,7 +797,7 @@ export async function POST(request: Request) {
 
     const roomCountsByRoom: RoomCounts =
       payload.roomCounts === undefined
-        ? evenSplit(roomSelection, maxImages)
+        ? evenSplit(roomSelection, interiorCount)
         : (payload.roomCounts as RoomCounts);
 
     const anglesPerRoom =
@@ -814,6 +846,8 @@ export async function POST(request: Request) {
       fileSize,
       aspectRatio,
       roomCounts: payload.roomCounts ?? null,
+      // Only when exterior photos are on, so seeds for interior-only batches do not change.
+      ...(exteriorCount > 0 ? { exteriorCount, exteriorSelection } : {}),
       // Only when set, so seeds for ordinary batches do not change.
       ...(anglesPerRoom > 1 ? { anglesPerRoom } : {}),
       ...(sameHouse ? { sameHouse } : {}),
@@ -871,13 +905,13 @@ export async function POST(request: Request) {
       scenarios.push(...planned);
     }
 
-    if (scenarios.length === 0) {
+    if (interiorCount > 0 && scenarios.length === 0) {
       throw new Error("No prompts could be generated from the selected options");
     }
 
     scenarios = assignStyles(scenarios, styleSelections, sameHouse);
 
-    const prompts = Array.from({ length: maxImages }, (_, index) => {
+    const prompts = Array.from({ length: interiorCount }, (_, index) => {
       const scenario = scenarios[index];
 
       if (!scenario) {
@@ -895,7 +929,7 @@ export async function POST(request: Request) {
         heroColorSelection,
         autoPaletteVariation,
         autoPaletteVariation ? (scenario.set ? paletteIndexFor(index, scenario, sameHouse) : index) : 0,
-        maxImages,
+        interiorCount,
         homeQualitySelection,
         scenario.wallColorPalette,
         [scenario.colorProfile],
@@ -912,6 +946,13 @@ export async function POST(request: Request) {
 
       return `${prompt}\n\nVariation ${index + 1} of ${maxImages}.`;
     });
+
+    // Exterior photos come after the interior images in the run.
+    const exteriorScenarios = buildExteriorScenarios(exteriorCount, exteriorSelection, seededRandom);
+    const exteriorPrompts = exteriorScenarios.map((scenario, index) =>
+      buildExteriorPrompt(scenario, homeQualitySelection, interiorCount + index, maxImages)
+    );
+    const allPrompts = [...prompts, ...exteriorPrompts];
 
     const batchSettings = {
       designStyle: styleSelection,
@@ -933,11 +974,13 @@ export async function POST(request: Request) {
       // Only when set, so the details saved for ordinary batches do not change.
       ...(anglesPerRoom > 1 ? { anglesPerRoom } : {}),
       ...(sameHouse ? { sameHouse } : {}),
+      // Only when exterior photos are on, so the details saved for interior-only batches do not change.
+      ...(exteriorCount > 0 ? { photoTypes: "interior, exterior", exteriorImages: exteriorCount } : {}),
     };
 
     if (maxImages > BATCH_MODE_THRESHOLD) {
       const submittedBatch = await submitImageBatchJob({
-        prompts,
+        prompts: allPrompts,
         model: PRIMARY_IMAGE_MODEL,
         quality,
         size,
@@ -957,6 +1000,7 @@ export async function POST(request: Request) {
             mode: "openai-batch",
             settings: batchSettings,
             scenarios,
+            exteriors: exteriorScenarios,
           })
         );
       } catch (error) {
@@ -1012,9 +1056,19 @@ export async function POST(request: Request) {
       );
 
       results.push(...made.map((b64): ImagesResponse => ({ data: b64 ? [{ b64_json: b64 }] : [] })));
+
+      // Exterior photos need no reference image, so they are made after the room sets.
+      for (let i = 0; i < exteriorPrompts.length; i += CONCURRENCY) {
+        const batch = exteriorPrompts.slice(i, i + CONCURRENCY);
+        results.push(
+          ...(await Promise.all(
+            batch.map((prompt) => generateImageWithFallback(prompt, quality, size, fallbackSize))
+          ))
+        );
+      }
     } else {
-      for (let i = 0; i < prompts.length; i += CONCURRENCY) {
-        const batch = prompts.slice(i, i + CONCURRENCY);
+      for (let i = 0; i < allPrompts.length; i += CONCURRENCY) {
+        const batch = allPrompts.slice(i, i + CONCURRENCY);
         const batchResults = await Promise.all(
           batch.map((prompt) =>
             generateImageWithFallback(prompt, quality, size, fallbackSize)
@@ -1037,6 +1091,7 @@ export async function POST(request: Request) {
         mode: "direct",
         settings: batchSettings,
         scenarios,
+        exteriors: exteriorScenarios,
       }),
       savedImages
     );
