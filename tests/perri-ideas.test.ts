@@ -56,7 +56,7 @@ test("every new room, style, color profile and lighting option builds a prompt",
 
 test("about 35 new focal points were added and none repeats", () => {
   assert.equal(new Set(focalPoints).size, focalPoints.length);
-  assert.ok(focalPoints.length >= 44);
+  assert.ok(focalPoints.length >= 43);
 });
 
 test("food and dinner focal points appear only in a dining room", () => {

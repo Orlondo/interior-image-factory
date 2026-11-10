@@ -146,7 +146,6 @@ export const focalPoints = [
   "kinetic or light-based art installation",
   "monolithic single-material statement wall",
   "ceiling-as-canvas (painted, textured, or sculptural)",
-  "oversized abstract art or mural",
   "radical geometric or angular architectural element",
   "unexpected material juxtaposition (marble meets rust, etc.)",
   "minimalist conceptual art piece",
