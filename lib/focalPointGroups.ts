@@ -58,7 +58,6 @@ const GROUP_DEFINITIONS: Array<{ title: string; entries: Entry[] }> = [
     entries: [
       { startsWith: "suspended or floating", label: "Floating sculpture" },
       { startsWith: "kinetic or light-based", label: "Kinetic or light art" },
-      { startsWith: "oversized abstract art", label: "Abstract art or mural" },
       { startsWith: "minimalist conceptual", label: "Conceptual art piece" },
       { startsWith: "gallery wall of fall photography", label: "Fall photo gallery" },
       { startsWith: "gallery wall of framed photography", label: "Photo & print gallery" },
