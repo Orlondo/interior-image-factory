@@ -8,6 +8,7 @@ import type { PromptScenario } from "./scenarioPlan";
  * the video studio, read this folder; nothing here depends on them.
  */
 
+import type { AccessoryScenario } from "./accessoryCombinations";
 import type { ExteriorScenario } from "./exteriorPromptBuilder";
 
 export const BATCH_MANIFEST_VERSION = 1;
@@ -28,6 +29,8 @@ export type BatchImageEntry = {
   wallColorPalette: string;
   /** Set only for exterior photos: what the photo shows. */
   exterior?: ExteriorScenario;
+  /** Set only for accessory close-ups: what the photo shows. */
+  accessory?: AccessoryScenario;
   /** Set only when several styles were picked. */
   style?: string;
   /** Set only for room angles: which room set (1-based), which angle of it (0 = the first), and its size. */
@@ -78,8 +81,11 @@ export function buildPendingManifest(input: {
   scenarios: PromptScenario[];
   /** Exterior photos, listed after the interior images. */
   exteriors?: ExteriorScenario[];
+  /** Accessory close-ups, listed after the exterior photos. */
+  accessories?: AccessoryScenario[];
 }): BatchManifest {
   const exteriors = input.exteriors ?? [];
+  const accessories = input.accessories ?? [];
 
   return {
     version: BATCH_MANIFEST_VERSION,
@@ -87,7 +93,7 @@ export function buildPendingManifest(input: {
     createdAt: (input.createdAt ?? new Date()).toISOString(),
     status: "pending",
     mode: input.mode,
-    requestedImages: input.scenarios.length + exteriors.length,
+    requestedImages: input.scenarios.length + exteriors.length + accessories.length,
     imageCount: 0,
     settings: input.settings,
     images: input.scenarios.map((scenario, index): BatchImageEntry => ({
@@ -118,6 +124,21 @@ export function buildPendingManifest(input: {
         ceilingLight: "",
         wallColorPalette: "",
         exterior,
+      }))
+    ).concat(
+      accessories.map((accessory, offset): BatchImageEntry => ({
+        variation: input.scenarios.length + exteriors.length + offset + 1,
+        file: null,
+        room: "accessory",
+        view: accessory.item,
+        colorProfile: "",
+        focalPoints: [],
+        windowStyle: "",
+        wall: "",
+        ceiling: "",
+        ceilingLight: "",
+        wallColorPalette: "",
+        accessory,
       }))
     ),
   };

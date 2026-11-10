@@ -13,6 +13,7 @@ type PhotoTypesProps = {
 const LABELS: Record<PhotoType, string> = {
   interior: "Interior rooms",
   exterior: "Exterior of the home",
+  accessory: "Accessory close-ups",
 };
 
 /** Chooses what a run makes. At least one stays on, and the run's images are split evenly between them. */
@@ -51,8 +52,8 @@ export function PhotoTypes({ setup, update }: PhotoTypesProps) {
       />
       {selected.length > 1 ? (
         <p className="text-xs text-[#98A2B3]">
-          The images are split evenly: {counts.interior} interior and {counts.exterior} exterior. Choose the exterior
-          details in the Exterior section.
+          The images are split evenly: {selected.map((type) => `${counts[type]} ${type}`).join(", ")}. Choose the
+          exterior and accessory details in their own sections.
         </p>
       ) : null}
     </div>

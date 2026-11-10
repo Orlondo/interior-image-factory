@@ -6,7 +6,7 @@ import { getIntensityStep } from "@/lib/looks";
 import { buildPromptPreview, buildPromptPreviewColors } from "@/lib/promptPreview";
 import { describeSplit, evenSplit } from "@/lib/roomMix";
 import { describeSets, liveLimitMessage, planRoomSets } from "@/lib/roomSets";
-import { describeStyles, effectiveStyles, exteriorImageCount, interiorImageCount, type Setup } from "@/lib/setup";
+import { accessoryImageCount, describeStyles, effectiveStyles, exteriorImageCount, interiorImageCount, type Setup } from "@/lib/setup";
 import type { GenerationUiState } from "@/lib/useGeneration";
 import { SectionCard } from "./SectionCard";
 
@@ -83,14 +83,15 @@ export function GenerationPanel({
           `${describeStyles(effectiveStyles(setup))} ${setup.homeQuality}${setup.condition === "pristine" ? "" : ` ${setup.condition}`} ${setup.rooms[0] ?? "living room"}${setup.camera === "standard" ? "" : `, ${setup.camera} angles`}`,
           `${setup.aspectRatio} ${setup.aspectRatio === "16:9" ? "landscape" : "format"}`,
           setup.rooms.length >= 2
-            ? `${interiorImageCount(setup)} ${exteriorImageCount(setup) > 0 ? "interior " : ""}images: ${describeSplit(
+            ? `${interiorImageCount(setup)} ${exteriorImageCount(setup) + accessoryImageCount(setup) > 0 ? "interior " : ""}images: ${describeSplit(
                 setup.rooms,
                 setup.roomSplitMode === "custom"
                   ? setup.roomCounts
                   : evenSplit(setup.rooms, interiorImageCount(setup))
               )}`
-            : `${interiorImageCount(setup)} ${exteriorImageCount(setup) > 0 ? "interior " : ""}images`,
+            : `${interiorImageCount(setup)} ${exteriorImageCount(setup) + accessoryImageCount(setup) > 0 ? "interior " : ""}images`,
           ...(exteriorImageCount(setup) > 0 ? [`${exteriorImageCount(setup)} exterior photos`] : []),
+          ...(accessoryImageCount(setup) > 0 ? [`${accessoryImageCount(setup)} accessory close-ups`] : []),
           ...(setsLine ? [setsLine] : []),
           `${setup.colorCoverage} coverage, intensity ${summaryColorIntensity}`,
         ]}

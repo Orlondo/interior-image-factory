@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import {
+  accessoryOptionGroups,
+  buildAccessoryPrompt,
+  buildAccessoryScenarios,
+  resolveAccessoryOptions,
+} from "../lib/accessoryCombinations";
 import { buildPendingManifest } from "../lib/batchManifest";
 import {
   createEmptyExteriorOptions,
@@ -12,6 +18,7 @@ import {
 import { buildExteriorPrompt, buildExteriorScenarios } from "../lib/exteriorPromptBuilder";
 import {
   DEFAULT_SETUP,
+  accessoryImageCount,
   buildGeneratePayload,
   exteriorImageCount,
   interiorImageCount,
@@ -32,10 +39,12 @@ test("photo types default to interior, ignore unknown values, and keep a fixed o
 });
 
 test("images are split evenly across photo types, the first type taking the extra image", () => {
-  assert.deepEqual(photoTypeCounts(12, ["interior"]), { interior: 12, exterior: 0 });
-  assert.deepEqual(photoTypeCounts(12, ["exterior"]), { interior: 0, exterior: 12 });
-  assert.deepEqual(photoTypeCounts(12, ["interior", "exterior"]), { interior: 6, exterior: 6 });
-  assert.deepEqual(photoTypeCounts(5, ["interior", "exterior"]), { interior: 3, exterior: 2 });
+  assert.deepEqual(photoTypeCounts(12, ["interior"]), { interior: 12, exterior: 0, accessory: 0 });
+  assert.deepEqual(photoTypeCounts(12, ["exterior"]), { interior: 0, exterior: 12, accessory: 0 });
+  assert.deepEqual(photoTypeCounts(12, ["interior", "exterior"]), { interior: 6, exterior: 6, accessory: 0 });
+  assert.deepEqual(photoTypeCounts(5, ["interior", "exterior"]), { interior: 3, exterior: 2, accessory: 0 });
+  assert.deepEqual(photoTypeCounts(7, ["accessory", "interior", "exterior"]), { interior: 3, exterior: 2, accessory: 2 });
+  assert.deepEqual(photoTypeCounts(8, ["accessory"]), { interior: 0, exterior: 0, accessory: 8 });
   assert.equal(interiorImageCount({ maxImages: 8, photoTypes: ["interior", "exterior"] }), 4);
   assert.equal(exteriorImageCount({ maxImages: 8, photoTypes: ["interior", "exterior"] }), 4);
 });
@@ -131,4 +140,64 @@ test("the saved batch details list exterior photos after the interior images", (
   const interiorOnly = buildPendingManifest({ id: "run-y", mode: "direct", settings: {}, scenarios: [] });
 
   assert.equal(interiorOnly.requestedImages, 0);
+});
+
+test("accessory choices: empty groups use every option, picked ones are kept, old setups have none", () => {
+  const resolved = resolveAccessoryOptions({ items: ["table lamp"] });
+
+  assert.deepEqual(resolved.items, ["table lamp"]);
+  for (const { key, options } of accessoryOptionGroups) {
+    if (key !== "items") assert.deepEqual(resolved[key], options, key);
+  }
+
+  const setup = sanitizeSetup({ photoTypes: ["accessory"], accessory: { items: ["table lamp", "nope"] } });
+
+  assert.deepEqual(setup.photoTypes, ["accessory"]);
+  assert.deepEqual(setup.accessory.items, ["table lamp"]);
+  assert.deepEqual(sanitizeSetup({}).accessory.items, []);
+});
+
+test("accessory scenarios cycle through every option and the prompt carries each choice", () => {
+  const options = resolveAccessoryOptions({});
+  const scenarios = buildAccessoryScenarios(options.lighting.length, options, counter());
+
+  assert.equal(new Set(scenarios.map((s) => s.lighting)).size, options.lighting.length);
+
+  const prompt = buildAccessoryPrompt(scenarios[0]!, "japandi", "upscale", 2, 6);
+
+  for (const value of Object.values(scenarios[0]!)) assert.ok(prompt.includes(value), value);
+  assert.match(prompt, /japandi/);
+  assert.match(prompt, /Variation 3 of 6/);
+});
+
+test("the payload adds accessory only when accessory photos are on", () => {
+  const withAccessory = buildGeneratePayload({
+    ...DEFAULT_SETUP,
+    photoTypes: ["interior", "accessory"],
+  }) as Record<string, unknown>;
+
+  assert.deepEqual(withAccessory.photoTypes, ["interior", "accessory"]);
+  assert.ok("accessory" in withAccessory);
+  assert.ok(!("exterior" in withAccessory));
+  assert.equal(accessoryImageCount({ maxImages: 10, photoTypes: ["interior", "accessory"] }), 5);
+  assert.equal(exteriorImageCount({ maxImages: 10, photoTypes: ["interior", "accessory"] }), 0);
+});
+
+test("the saved batch details list accessory close-ups after the exterior photos", () => {
+  const [accessory] = buildAccessoryScenarios(1, resolveAccessoryOptions({}), counter());
+  const [exterior] = buildExteriorScenarios(1, resolveExteriorOptions({}), counter());
+  const manifest = buildPendingManifest({
+    id: "run-z",
+    mode: "direct",
+    settings: {},
+    scenarios: [],
+    exteriors: [exterior!],
+    accessories: [accessory!],
+  });
+
+  assert.equal(manifest.requestedImages, 2);
+  assert.equal(manifest.images[0]?.room, "exterior");
+  assert.equal(manifest.images[1]?.room, "accessory");
+  assert.equal(manifest.images[1]?.variation, 2);
+  assert.deepEqual(manifest.images[1]?.accessory, accessory);
 });
