@@ -52,7 +52,8 @@ export type Setup = {
   ceilings: string[];
   ceilingLights: string[];
   roomSize: string;
-  designStyle: string;
+  /** One or more styles. A batch spreads them evenly across its images; empty means the default style. */
+  designStyles: string[];
   colorMood: ColorMood;
   colorStrategy: ColorStrategy;
   colorCoverage: ColorCoverage;
@@ -92,7 +93,7 @@ export const DEFAULT_SETUP: Setup = {
   ceilings: [ceilings[0] ?? "smooth white ceiling"],
   ceilingLights: [ceilingLights[0] ?? "recessed downlights"],
   roomSize: roomSizes[1] ?? "standard room (180-280 sq ft)",
-  designStyle: styles[0] ?? "modern",
+  designStyles: [styles[0] ?? "modern"],
   colorMood: colorMoods[0] ?? "Warm Neutral",
   colorStrategy: COLOR_STRATEGY_DEFAULT,
   colorCoverage: COLOR_COVERAGE_DEFAULT,
@@ -112,6 +113,25 @@ export const DEFAULT_SETUP: Setup = {
   sameHouse: false,
 };
 
+/** The styles a run uses: the picked ones, or the default style when none is picked. */
+export function effectiveStyles(setup: Pick<Setup, "designStyles">): string[] {
+  return setup.designStyles.length > 0 ? setup.designStyles : [styles[0] ?? "modern"];
+}
+
+/** "modern", "modern and japandi", or "3 styles" for the page's summaries. */
+export function describeStyles(picked: readonly string[]): string {
+  return picked.length <= 2 ? picked.join(" and ") : `${picked.length} styles`;
+}
+
+/** Reads a list of styles, or the single `designStyle` that setups saved before multi-style hold. */
+function sanitizeStyles(source: Record<string, unknown>): string[] {
+  if (Array.isArray(source.designStyles)) {
+    return listOf(source.designStyles, styles, []);
+  }
+
+  return [oneOf(source.designStyle, styles, DEFAULT_SETUP.designStyles[0] as string)];
+}
+
 /** The exact request body the page has always sent to /generate. */
 export function buildGeneratePayload(setup: Setup) {
   const customSplit = setup.roomSplitMode === "custom" && setup.rooms.length >= 2;
@@ -126,7 +146,9 @@ export function buildGeneratePayload(setup: Setup) {
     ceilings: setup.ceilings,
     ceilingLights: setup.ceilingLights,
     roomSize: setup.roomSize,
-    designStyle: setup.designStyle,
+    designStyle: effectiveStyles(setup)[0] as string,
+    // Only sent when more than one style is picked, so the default payload stays what it was before multi-style.
+    ...(effectiveStyles(setup).length > 1 ? { designStyles: effectiveStyles(setup) } : {}),
     colorMood: setup.colorMood,
     colorStrategy: setup.colorStrategy,
     colorCoverage: setup.colorCoverage,
@@ -185,7 +207,7 @@ export function sanitizeSetup(raw: unknown): Setup {
     ceilings: listOf(source.ceilings, ceilings, d.ceilings),
     ceilingLights: listOf(source.ceilingLights, ceilingLights, d.ceilingLights),
     roomSize: oneOf(source.roomSize, roomSizes, d.roomSize),
-    designStyle: oneOf(source.designStyle, styles, d.designStyle),
+    designStyles: sanitizeStyles(source),
     colorMood: oneOf(source.colorMood, colorMoods, d.colorMood),
     colorStrategy: oneOf(source.colorStrategy, colorStrategies, d.colorStrategy),
     colorCoverage: oneOf(source.colorCoverage, colorCoverages, d.colorCoverage),

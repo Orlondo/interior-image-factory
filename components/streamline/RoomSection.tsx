@@ -4,8 +4,9 @@ import { RoomTypePicker } from "@/components/ui-modernization";
 import { cameras, conditions, homeQualities, roomSizes, rooms, styles, type RoomType } from "@/lib/combinations";
 import { evenSplit } from "@/lib/roomMix";
 import { resolveQuickSets } from "@/lib/roomPicker";
-import type { Camera, Condition, HomeQuality, Setup } from "@/lib/setup";
+import { describeStyles, effectiveStyles, type Camera, type Condition, type HomeQuality, type Setup } from "@/lib/setup";
 import { SelectField } from "./fields";
+import { OptionGroup } from "./OptionGroup";
 import { RoomMix } from "./RoomMix";
 import { RoomSets } from "./RoomSets";
 import { SectionCard } from "./SectionCard";
@@ -101,7 +102,7 @@ export function RoomSection({ setup, update, isOpen, onToggle }: RoomSectionProp
       icon="room"
       isOpen={isOpen}
       onToggle={onToggle}
-      summary={`${describeRooms(setup.rooms)} · ${setup.designStyle} · ${setup.homeQuality}${setup.condition === "pristine" ? "" : ` · ${setup.condition}`} · ${setup.roomSize}${setup.camera === "standard" ? "" : ` · ${setup.camera} angles`}${setup.anglesPerRoom > 1 ? ` · ${setup.anglesPerRoom} angles per room` : ""}${setup.sameHouse ? " · one house" : ""}`}
+      summary={`${describeRooms(setup.rooms)} · ${describeStyles(effectiveStyles(setup))} · ${setup.homeQuality}${setup.condition === "pristine" ? "" : ` · ${setup.condition}`} · ${setup.roomSize}${setup.camera === "standard" ? "" : ` · ${setup.camera} angles`}${setup.anglesPerRoom > 1 ? ` · ${setup.anglesPerRoom} angles per room` : ""}${setup.sameHouse ? " · one house" : ""}`}
     >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 lg:gap-5">
         <div className="md:col-span-2 lg:col-span-4">
@@ -121,17 +122,20 @@ export function RoomSection({ setup, update, isOpen, onToggle }: RoomSectionProp
           <RoomSets setup={setup} update={update} />
         </div>
 
-        <SelectField
-          label="Interior design style"
-          value={setup.designStyle}
-          onChange={(designStyle) => update({ designStyle })}
-        >
-          {styles.map((style) => (
-            <option key={style} value={style}>
-              {style}
-            </option>
-          ))}
-        </SelectField>
+        <div className="md:col-span-2 lg:col-span-4">
+          <OptionGroup
+            legend="Interior design style"
+            allLabel="All styles"
+            options={styles}
+            selected={setup.designStyles}
+            onChange={(designStyles) => update({ designStyles })}
+          />
+          {setup.designStyles.length > 1 ? (
+            <p className="mt-2 text-xs text-[#98A2B3]">
+              The styles are spread evenly across the images. Images of one room set, and rooms of one house, share a style.
+            </p>
+          ) : null}
+        </div>
 
         <SelectField
           label="Home quality"

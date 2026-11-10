@@ -54,7 +54,7 @@ test("six distinct angles, and a batch cycles through them so neighbours never r
 test("the image's place in the batch picks its angle, so a batch has variety", () => {
   const forImage = (index: number) =>
     buildPrompt(
-      rooms[0], DEFAULT_SETUP.roomSize, DEFAULT_SETUP.designStyle, DEFAULT_SETUP.colorMood,
+      rooms[0], DEFAULT_SETUP.roomSize, DEFAULT_SETUP.designStyles[0], DEFAULT_SETUP.colorMood,
       DEFAULT_SETUP.colorIntensity, DEFAULT_SETUP.colorStrategy, DEFAULT_SETUP.colorCoverage,
       DEFAULT_SETUP.heroColor, false, 0, 12, DEFAULT_SETUP.homeQuality, "", [DEFAULT_SETUP.colorProfiles[0]],
       DEFAULT_SETUP.views[0], DEFAULT_SETUP.windowStyles.slice(0, 1), [], [], [], [], "pristine", "dramatic", index
@@ -68,7 +68,7 @@ test("every style and condition still gets the angle, for both camera modes", ()
   for (const camera of ["dramatic", "cinematic"] as const) {
     for (const style of styles) {
       for (const condition of conditions) {
-        const text = prompt({ designStyle: style, condition, camera });
+        const text = prompt({ designStyles: [style], condition, camera });
         assert.ok(text.includes("Camera angle (critical):"), `${camera} / ${style} / ${condition}`);
         assert.ok(!text.includes(STANDARD_LINE), `${camera} / ${style} / ${condition}`);
         assert.ok(text.includes("no fisheye"), `${camera} / ${style} / ${condition}`);
@@ -99,7 +99,7 @@ test("cinematic gives every image a film-style camera position and changes nothi
 test("a style with its own camera finish (Liminal) keeps it, even with a cinematic camera", () => {
   const liminal = styles.find((s) => /liminal/i.test(s));
   if (!liminal) return;
-  const text = prompt({ designStyle: liminal, camera: "cinematic" });
+  const text = prompt({ designStyles: [liminal], camera: "cinematic" });
   assert.ok(text.includes("Camera angle (critical): Cinematic"));
   assert.ok(!text.includes("tack-sharp focus"));
 });

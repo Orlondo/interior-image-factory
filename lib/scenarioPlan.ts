@@ -16,6 +16,8 @@ export type PromptScenario = {
   ceiling: string;
   ceilingLight: string;
   wallColorPalette: string;
+  /** Set only when several styles were picked: this image's style. */
+  style?: string;
   /** Set when the image is one angle of a room set (see lib/roomSets.ts). */
   set?: { number: number; angle: number; size: number };
 };
@@ -112,4 +114,32 @@ export function buildScenarioPlan(input: ScenarioPlanInput): PromptScenario[] {
   });
 
   return shuffle(planned, input.random);
+}
+
+/**
+ * Spreads several styles evenly across a run. With one style (or none) the scenarios are returned
+ * unchanged. Every image of a room set shares one style, and a same-house run shares the first style,
+ * so a house never changes style between rooms. When the count does not divide evenly, the first
+ * styles in the list get the extra images.
+ */
+export function assignStyles(
+  scenarios: readonly PromptScenario[],
+  styles: readonly string[],
+  sameHouse = false
+): PromptScenario[] {
+  if (styles.length <= 1) {
+    return [...scenarios];
+  }
+
+  const slots = new Map<string, number>();
+
+  return scenarios.map((scenario, index) => {
+    const key = sameHouse ? "house" : scenario.set ? `set-${scenario.set.number}` : `image-${index}`;
+
+    if (!slots.has(key)) {
+      slots.set(key, slots.size);
+    }
+
+    return { ...scenario, style: styles[(slots.get(key) as number) % styles.length] as string };
+  });
 }
