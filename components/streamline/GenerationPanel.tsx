@@ -6,7 +6,7 @@ import { getIntensityStep } from "@/lib/looks";
 import { buildPromptPreview, buildPromptPreviewColors } from "@/lib/promptPreview";
 import { describeSplit, evenSplit } from "@/lib/roomMix";
 import { describeSets, liveLimitMessage, planRoomSets } from "@/lib/roomSets";
-import { describeStyles, effectiveStyles, type Setup } from "@/lib/setup";
+import { describeStyles, effectiveStyles, exteriorImageCount, interiorImageCount, type Setup } from "@/lib/setup";
 import type { GenerationUiState } from "@/lib/useGeneration";
 import { SectionCard } from "./SectionCard";
 
@@ -50,7 +50,7 @@ export function GenerationPanel({
       setup.rooms,
       setup.roomSplitMode === "custom" && setup.rooms.length >= 2
         ? setup.roomCounts
-        : evenSplit(setup.rooms, setup.maxImages),
+        : evenSplit(setup.rooms, interiorImageCount(setup)),
       setup.anglesPerRoom
     ),
     setup.anglesPerRoom,
@@ -83,13 +83,14 @@ export function GenerationPanel({
           `${describeStyles(effectiveStyles(setup))} ${setup.homeQuality}${setup.condition === "pristine" ? "" : ` ${setup.condition}`} ${setup.rooms[0] ?? "living room"}${setup.camera === "standard" ? "" : `, ${setup.camera} angles`}`,
           `${setup.aspectRatio} ${setup.aspectRatio === "16:9" ? "landscape" : "format"}`,
           setup.rooms.length >= 2
-            ? `${setup.maxImages} images: ${describeSplit(
+            ? `${interiorImageCount(setup)} ${exteriorImageCount(setup) > 0 ? "interior " : ""}images: ${describeSplit(
                 setup.rooms,
                 setup.roomSplitMode === "custom"
                   ? setup.roomCounts
-                  : evenSplit(setup.rooms, setup.maxImages)
+                  : evenSplit(setup.rooms, interiorImageCount(setup))
               )}`
-            : `${setup.maxImages} images`,
+            : `${interiorImageCount(setup)} ${exteriorImageCount(setup) > 0 ? "interior " : ""}images`,
+          ...(exteriorImageCount(setup) > 0 ? [`${exteriorImageCount(setup)} exterior photos`] : []),
           ...(setsLine ? [setsLine] : []),
           `${setup.colorCoverage} coverage, intensity ${summaryColorIntensity}`,
         ]}
@@ -178,7 +179,7 @@ export function GenerationPanel({
 
         {!canGenerate ? (
           <p role="status" className="text-sm text-[#FCD34D]">
-            {limitMessage ?? `Images per room must add up to ${setup.maxImages} before you can generate.`}
+            {limitMessage ?? `Images per room must add up to ${interiorImageCount(setup)} before you can generate.`}
           </p>
         ) : null}
       </div>

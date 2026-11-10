@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { AppHeader } from "@/components/streamline/AppHeader";
 import { DetailsSection } from "@/components/streamline/DetailsSection";
+import { ExteriorSection } from "@/components/streamline/ExteriorSection";
 import { GenerationPanel } from "@/components/streamline/GenerationPanel";
 import { ImageReview } from "@/components/streamline/ImageReview";
 import { LookSection } from "@/components/streamline/LookSection";
@@ -23,7 +24,7 @@ import {
   type SavedLook,
   type SavedSetup,
 } from "@/lib/savedItems";
-import { DEFAULT_SETUP, type Setup } from "@/lib/setup";
+import { DEFAULT_SETUP, interiorImageCount, type Setup } from "@/lib/setup";
 import { useGeneration } from "@/lib/useGeneration";
 import { useSectionState } from "@/lib/useSectionState";
 import { useSavedItems } from "@/lib/useSavedItems";
@@ -43,7 +44,7 @@ export default function Home() {
   const canGenerate =
     (setup.roomSplitMode !== "custom" ||
       setup.rooms.length < 2 ||
-      sumCounts(setup.rooms, setup.roomCounts) === setup.maxImages) &&
+      sumCounts(setup.rooms, setup.roomCounts) === interiorImageCount(setup)) &&
     liveLimitMessage(setup.maxImages, setup.anglesPerRoom, setup.sameHouse) === null;
 
   function saveLook(name: string, includeDetails: boolean): string | null {
@@ -120,6 +121,8 @@ export default function Home() {
             isOpen={sections.state.room}
             onToggle={() => sections.toggle("room")}
           />
+
+          <ExteriorSection setup={setup} update={update} />
 
           <LookSection
             setup={setup}

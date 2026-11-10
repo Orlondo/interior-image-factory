@@ -4,6 +4,7 @@ import { describeBatch, countCombinations } from "@/lib/batch";
 import { rescaleCounts } from "@/lib/roomMix";
 import {
   MAX_IMAGE_CHOICES,
+  interiorImageCount,
   type AspectRatioOption,
   type FileSizeOption,
   type Setup,
@@ -49,7 +50,10 @@ export function OutputSection({ setup, update, isOpen, onToggle }: OutputSection
             const maxImages = Number(value);
             update(
               setup.roomSplitMode === "custom"
-                ? { maxImages, roomCounts: rescaleCounts(setup.rooms, setup.roomCounts, maxImages) }
+                ? {
+                    maxImages,
+                    roomCounts: rescaleCounts(setup.rooms, setup.roomCounts, interiorImageCount({ ...setup, maxImages })),
+                  }
                 : { maxImages }
             );
           }}

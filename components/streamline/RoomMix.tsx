@@ -1,7 +1,7 @@
 "use client";
 
 import { evenSplit, sumCounts, type RoomCounts } from "@/lib/roomMix";
-import type { RoomSplitMode, Setup } from "@/lib/setup";
+import { interiorImageCount, type RoomSplitMode, type Setup } from "@/lib/setup";
 import { SECONDARY_BUTTON_CLASS } from "./fields";
 
 type RoomMixProps = {
@@ -17,7 +17,9 @@ function modeClass(active: boolean): string {
 
 /** Only shown with two or more rooms: choose an even split or exact counts per room. */
 export function RoomMix({ setup, update }: RoomMixProps) {
-  const { rooms, maxImages, roomSplitMode, roomCounts } = setup;
+  const { rooms, roomSplitMode, roomCounts } = setup;
+  // With exterior photos on, the rooms share only the interior part of the run.
+  const maxImages = interiorImageCount(setup);
 
   if (rooms.length < 2) {
     return null;

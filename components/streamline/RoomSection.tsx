@@ -4,9 +4,10 @@ import { RoomTypePicker } from "@/components/ui-modernization";
 import { cameras, conditions, homeQualities, roomSizes, rooms, styles, type RoomType } from "@/lib/combinations";
 import { evenSplit } from "@/lib/roomMix";
 import { resolveQuickSets } from "@/lib/roomPicker";
-import { describeStyles, effectiveStyles, type Camera, type Condition, type HomeQuality, type Setup } from "@/lib/setup";
+import { describeStyles, effectiveStyles, interiorImageCount, type Camera, type Condition, type HomeQuality, type Setup } from "@/lib/setup";
 import { SelectField } from "./fields";
 import { OptionGroup } from "./OptionGroup";
+import { PhotoTypes } from "./PhotoTypes";
 import { RoomMix } from "./RoomMix";
 import { RoomSets } from "./RoomSets";
 import { SectionCard } from "./SectionCard";
@@ -91,7 +92,7 @@ export function RoomSection({ setup, update, isOpen, onToggle }: RoomSectionProp
     update({
       rooms: nextRooms,
       roomSplitMode: keepCustom ? "custom" : "even",
-      roomCounts: keepCustom ? evenSplit(nextRooms, setup.maxImages) : {},
+      roomCounts: keepCustom ? evenSplit(nextRooms, interiorImageCount(setup)) : {},
     });
   }
 
@@ -105,6 +106,10 @@ export function RoomSection({ setup, update, isOpen, onToggle }: RoomSectionProp
       summary={`${describeRooms(setup.rooms)} · ${describeStyles(effectiveStyles(setup))} · ${setup.homeQuality}${setup.condition === "pristine" ? "" : ` · ${setup.condition}`} · ${setup.roomSize}${setup.camera === "standard" ? "" : ` · ${setup.camera} angles`}${setup.anglesPerRoom > 1 ? ` · ${setup.anglesPerRoom} angles per room` : ""}${setup.sameHouse ? " · one house" : ""}`}
     >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+        <div className="md:col-span-2 lg:col-span-4">
+          <PhotoTypes setup={setup} update={update} />
+        </div>
+
         <div className="md:col-span-2 lg:col-span-4">
           <RoomTypePicker
             selectedRooms={setup.rooms}
