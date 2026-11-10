@@ -13,19 +13,19 @@ import { SectionCard } from "./SectionCard";
 const ROOM_CATEGORY_DEFINITIONS: Array<{ title: string; rooms: string[] }> = [
   {
     title: "Living Spaces",
-    rooms: ["living room", "sunken living room", "family room", "breakfast nook", "library", "dining room"],
+    rooms: ["living room", "sunken living room", "family room", "breakfast nook", "library", "dining room", "sunroom", "staircase"],
   },
-  { title: "Private Spaces", rooms: ["bedroom", "home office", "nursery", "bathroom"] },
+  { title: "Private Spaces", rooms: ["bedroom", "home office", "nursery", "bathroom", "powder room"] },
   {
     title: "Service Spaces",
     rooms: ["kitchen", "pantry", "laundry room", "mud room", "walk-in closet", "foyer"],
   },
   {
     title: "Entertainment Spaces",
-    rooms: ["theater room", "game room", "wine cellar", "recording studio"],
+    rooms: ["theater room", "game room", "wine cellar", "recording studio", "home bar"],
   },
   { title: "Fitness Spaces", rooms: ["home gym"] },
-  { title: "Utility Spaces", rooms: ["basement"] },
+  { title: "Utility Spaces", rooms: ["basement", "garage"] },
   {
     title: "Transitional Spaces",
     rooms: ["hallway", "stairwell", "lobby", "waiting room", "empty office", "indoor pool"],

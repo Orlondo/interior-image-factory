@@ -26,7 +26,12 @@ export type RoomType =
   | "lobby"
   | "waiting room"
   | "empty office"
-  | "indoor pool";
+  | "indoor pool"
+  | "sunroom"
+  | "garage"
+  | "staircase"
+  | "powder room"
+  | "home bar";
 
 export const rooms: RoomType[] = [
   "living room",
@@ -57,6 +62,11 @@ export const rooms: RoomType[] = [
   "waiting room",
   "empty office",
   "indoor pool",
+  "sunroom",
+  "garage",
+  "staircase",
+  "powder room",
+  "home bar",
 ];
 
 export const views = [
@@ -87,6 +97,7 @@ export const styles = [
   "quiet luxury",
   "eclectic",
   "liminal spaces",
+  "wabi-sabi",
 ];
 
 export const walls = [
@@ -125,6 +136,7 @@ export const colorProfiles = [
   "high-contrast palette",
   "earthy saturated palette",
   "soft pastel palette",
+  "no fixed color palette (material-led)",
 ];
 
 export const focalPoints = [
@@ -138,6 +150,43 @@ export const focalPoints = [
   "radical geometric or angular architectural element",
   "unexpected material juxtaposition (marble meets rust, etc.)",
   "minimalist conceptual art piece",
+  "floor-to-ceiling room divider wall with integrated storage or millwork",
+  "wood-framed rectangular doorway with clean trim and warm natural grain",
+  "travertine-framed rectangular doorway with a simple stone surround",
+  "marble-framed curved doorway with a soft arch and minimal detailing",
+  "TV wall with integrated cabinetry and a clean media console below",
+  "indoor open-to-outdoor living space with sliding glass doors, integrated indoor-outdoor seating, and a seamless transition to the exterior",
+  "built-in wine wall with shelving and glass-front bottle storage",
+  "indoor planterium wall with layered greenery and integrated lighting",
+  "large dining table with a cluster of flowering plants as the centerpiece",
+  "dining table with a modern Thanksgiving-inspired table setting or an everyday dinner table setting, modest plated portions, and simple servingware (not a grand banquet)",
+  "kitchen countertop with everyday dinner styling, practical plates, and small realistic food details (not a ceremonial feast)",
+  "friendly pet dog lounging near the focal area as a lived-in lifestyle element",
+  "friendly pet cat perched or curled near the focal area as a lived-in lifestyle element",
+  "fall floral arrangement with warm-toned leaves, branches, and seasonal texture",
+  "small indoor tree plants with autumn foliage in sculptural planters",
+  "gallery wall of fall photography prints in coordinated frames",
+  "floor-to-ceiling marble wall with subtle veining and minimal trim",
+  "mirror tile wall made of small square mirrors set in a tight grid to form one large mirrored wall",
+  "single large seamless full-height mirror wall with minimal frame",
+  "French doors with slim-framed glass panes, a symmetrical double-door design, and soft natural light",
+  "regular floor lamp with a drum shade and warm ambient glow",
+  "hanging floor lamp with an elegant shade and soft layered light",
+  "clear glass divider wall with a warm wood frame and minimal profile",
+  "bookcase room divider with open shelving on both sides and a simple wood frame",
+  "metal divider wall with sculptural framing and slim linear detailing",
+  "bedroom fireplace wall with plaster or stone surround",
+  "kitchen fireplace as a backsplash feature with a simple framed surround",
+  "kitchen fireplace framed on the countertop with a clean built-in profile",
+  "kitchen fireplace integrated into the island with a centered linear fire feature",
+  "small cluster of cactus plants in ceramic or concrete planters",
+  "small potted tree in a simple ceramic or plaster planter",
+  "curtains with layered sheer panels and a tailored linen drape",
+  "curtains with a soft Roman shade and woven textured fabric",
+  "curtains with a dramatic full-length velvet drape",
+  "gallery wall of framed photography and art prints",
+  "large architectural painting with a minimalist frame",
+  "mixed wall art arrangement with vintage and contemporary pieces",
 ];
 
 export const ceilings = [
@@ -156,6 +205,12 @@ export const ceilingLights = [
   "architectural pendant lights",
   "concealed cove lighting",
   "flush mount ceiling lights",
+  "linear suspension lights",
+  "industrial cage pendants",
+  "lantern or orb pendants",
+  "wall sconces with ambient glow",
+  "LED strip accent lighting",
+  "oversized drum shade pendants",
 ];
 
 export const roomSizes = [
@@ -227,6 +282,8 @@ export const heroColors = [
   "Vivid Mixed",
   "Slate & Steel",
   "Dark Earthy Mixed",
+  "Pink Mixed",
+  "Purple Mixed",
   ...singleHeroColors,
 ] as const;
 

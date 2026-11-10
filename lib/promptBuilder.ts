@@ -145,6 +145,8 @@ function getColorProfileExecutionRule(
       "Favor earthy neutrals (clay, terracotta, sand, cognac, olive accents) with controlled saturation and high-end material realism.",
     "soft pastel palette":
       "Favor pale warm-neutral tints and muted mineral tones with soft tonal harmony, avoiding candy-like saturation.",
+    "no fixed color palette (material-led)":
+      "Let the palette stay material-led and mood-driven rather than locked to a single color family. Prioritize warm stone, ivory, walnut, blackened metal, soft charcoal, linen, and restrained accents so the room can feel natural, elevated, and varied without defaulting to orange, blue, or green.",
   };
 
   return colorProfileTypes
@@ -332,19 +334,39 @@ export function buildPrompt(
       ? "Keep palette family cohesion through quiet tonal variation in texture and material, with color staying low in saturation and contrast."
       : "Keep palette family cohesion while allowing controlled variation and tonal exploration across walls, cabinetry, millwork, built-ins, rugs, furniture, and artwork.";
 
+  // Room rules for focal points: dinner and food scenes only make sense in a dining room, and curtains
+  // never belong in a kitchen. A focal point that does not fit this room is left out of this room's prompt.
+  const roomFocalPointTypes = Array.isArray(focalPointTypes)
+    ? focalPointTypes.filter((focalPoint) => {
+        const name = focalPoint.toLowerCase();
+        const isFoodFocalPoint =
+          name.includes("thanksgiving") || name.includes("dinner") || name.includes("food");
+
+        if (room !== "dining room" && isFoodFocalPoint) {
+          return false;
+        }
+
+        if (room === "kitchen" && name.includes("curtain")) {
+          return false;
+        }
+
+        return true;
+      })
+    : [];
+
   const focalPointDirection =
-    focalPointTypes.length > 0
-      ? focalPointTypes.join(", ")
+    roomFocalPointTypes.length > 0
+      ? roomFocalPointTypes.join(", ")
       : "balanced composition with subtle design elements";
 
   const focalPointRule =
-    focalPointTypes.length > 0
-      ? `Feature one or more avant-garde focal points: ${focalPointTypes.join(", ")}. Make these elements daringly bold, conceptually interesting, and visually commanding. Prioritize artistic expression and experimental design over conventional aesthetics. These should provoke thought or challenge expectations.`
+    roomFocalPointTypes.length > 0
+      ? `Feature one or more avant-garde focal points: ${roomFocalPointTypes.join(", ")}. Make these elements daringly bold, conceptually interesting, and visually commanding. Prioritize artistic expression and experimental design over conventional aesthetics. These should provoke thought or challenge expectations.`
       : "Compose with subtle design elements and balanced spatial flow without one dominating focal point.";
 
   // The avant-garde lines belong to the focal point rule, so they only appear when focal points are selected.
   const focalPointStyleLines =
-    focalPointTypes.length > 0
+    roomFocalPointTypes.length > 0
       ? `  - When focal points are selected: prioritize artistic impact, conceptual clarity, and avant-garde expression over comfort or conventionality
   - Sculptural and experimental designer furniture, collectible art objects, unconventional materials
   - Styling accessories: bold art pieces, conceptual sculptures, unconventional objects that challenge the eye
@@ -472,6 +494,8 @@ export function buildPrompt(
       "Soft contemporary forms, tactile natural materials, balanced tonal contrast, gentle curves, and calm ambiance.",
     "quiet luxury":
       "Understated premium finishes, tonal layering with refined visible color accents, bespoke detailing, sophisticated composition, impeccable craftsmanship.",
+    "wabi-sabi":
+      "Imperfect handmade beauty: rough lime-wash or clay plaster walls, weathered raw wood, irregular stoneware and ceramics, aged linen, muted earthy tones, low organic furniture, dried branches, visible patina and asymmetry. Avoid glossy, polished, symmetrical, or brand-new-looking finishes.",
     eclectic:
       "Curated mix of eras and styles, intentional contrast, expressive art and objects, cohesive yet personality-driven composition.",
     "liminal spaces":
