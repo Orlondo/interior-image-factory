@@ -1,5 +1,6 @@
 "use client";
 
+import { buildFocalPointSubGroups } from "@/lib/focalPointGroups";
 import {
   ceilingLights,
   ceilings,
@@ -57,6 +58,7 @@ export function DetailsSection({ setup, update, isOpen, onToggle }: DetailsSecti
             selected={setup[group.key]}
             onChange={(next) => update({ [group.key]: next } as Partial<Setup>)}
             surprise
+            subGroups={group.key === "focalPoints" ? buildFocalPointSubGroups() : undefined}
           />
         ))}
       </div>

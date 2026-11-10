@@ -17,6 +17,8 @@ type OptionGroupProps = {
   surprise?: boolean;
   /** Render the chips directly, without the collapsible wrapper. */
   bare?: boolean;
+  /** Show the options under small headings, with a short label on each chip (display only). */
+  subGroups?: Array<{ title: string; options: Array<{ value: string; label: string }> }>;
 };
 
 export function OptionGroup({
@@ -27,6 +29,7 @@ export function OptionGroup({
   onChange,
   surprise = false,
   bare = false,
+  subGroups,
 }: OptionGroupProps) {
   const allSelected = selected.length === options.length;
   const chipOptions = [
@@ -37,6 +40,8 @@ export function OptionGroup({
   function handleToggle(value: string) {
     onChange(value === ALL_VALUE ? setAll(options, !allSelected) : toggleValue(selected, value));
   }
+
+  const selectedValues = allSelected ? [ALL_VALUE, ...selected] : selected;
 
   const chips = (
     <div className="space-y-3">
@@ -49,12 +54,34 @@ export function OptionGroup({
           Surprise me
         </button>
       ) : null}
-      <ChipGroup
-        options={chipOptions}
-        selectedValues={allSelected ? [ALL_VALUE, ...selected] : selected}
-        onToggleValue={handleToggle}
-        ariaLabel={legend}
-      />
+      {subGroups ? (
+        <>
+          <ChipGroup
+            options={[{ value: ALL_VALUE, label: allLabel }]}
+            selectedValues={selectedValues}
+            onToggleValue={handleToggle}
+            ariaLabel={`${legend}: select all`}
+          />
+          {subGroups.map((group) => (
+            <div key={group.title} className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-[#98A2B3]">{group.title}</p>
+              <ChipGroup
+                options={group.options}
+                selectedValues={selectedValues}
+                onToggleValue={handleToggle}
+                ariaLabel={`${legend}: ${group.title}`}
+              />
+            </div>
+          ))}
+        </>
+      ) : (
+        <ChipGroup
+          options={chipOptions}
+          selectedValues={selectedValues}
+          onToggleValue={handleToggle}
+          ariaLabel={legend}
+        />
+      )}
     </div>
   );
 
