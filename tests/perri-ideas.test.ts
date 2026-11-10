@@ -22,7 +22,7 @@ function promptFor(
 ) {
   const s = DEFAULT_SETUP;
   return buildPrompt(
-    room, s.roomSize, options.style ?? s.designStyle, s.colorMood, s.colorIntensity, s.colorStrategy,
+    room, s.roomSize, options.style ?? s.designStyles[0], s.colorMood, s.colorIntensity, s.colorStrategy,
     s.colorCoverage, options.hero ?? s.heroColor, false, 0, 12, s.homeQuality, "",
     options.profiles ?? [s.colorProfiles[0]], s.views[0], s.windowStyles.slice(0, 1),
     options.focal ?? [], [], [], options.lights ?? []

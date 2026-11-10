@@ -104,7 +104,7 @@ test("applying each Look yields a prompt that builds, and each Look matches only
     assert.equal(findMatchingLook(setup, BUILT_IN_LOOKS)?.id, look.id, look.name);
 
     const prompt = buildPrompt(
-      "living room", setup.roomSize, setup.designStyle, setup.colorMood, setup.colorIntensity,
+      "living room", setup.roomSize, setup.designStyles[0], setup.colorMood, setup.colorIntensity,
       setup.colorStrategy, setup.colorCoverage, setup.heroColor, setup.autoPaletteVariation,
       0, 12, setup.homeQuality, "auto", setup.colorProfiles, views[0], setup.windowStyles,
       [], setup.walls, setup.ceilings, setup.ceilingLights

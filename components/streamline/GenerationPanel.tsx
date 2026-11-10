@@ -6,7 +6,7 @@ import { getIntensityStep } from "@/lib/looks";
 import { buildPromptPreview, buildPromptPreviewColors } from "@/lib/promptPreview";
 import { describeSplit, evenSplit } from "@/lib/roomMix";
 import { describeSets, liveLimitMessage, planRoomSets } from "@/lib/roomSets";
-import type { Setup } from "@/lib/setup";
+import { describeStyles, effectiveStyles, type Setup } from "@/lib/setup";
 import type { GenerationUiState } from "@/lib/useGeneration";
 import { SectionCard } from "./SectionCard";
 
@@ -80,7 +80,7 @@ export function GenerationPanel({
       <SummaryCard
         title="Generation Summary"
         lines={[
-          `${setup.designStyle} ${setup.homeQuality}${setup.condition === "pristine" ? "" : ` ${setup.condition}`} ${setup.rooms[0] ?? "living room"}${setup.camera === "standard" ? "" : `, ${setup.camera} angles`}`,
+          `${describeStyles(effectiveStyles(setup))} ${setup.homeQuality}${setup.condition === "pristine" ? "" : ` ${setup.condition}`} ${setup.rooms[0] ?? "living room"}${setup.camera === "standard" ? "" : `, ${setup.camera} angles`}`,
           `${setup.aspectRatio} ${setup.aspectRatio === "16:9" ? "landscape" : "format"}`,
           setup.rooms.length >= 2
             ? `${setup.maxImages} images: ${describeSplit(

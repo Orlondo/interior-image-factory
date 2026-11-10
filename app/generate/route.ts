@@ -39,7 +39,7 @@ import {
   writeCompletedBatch,
   writePendingManifest,
 } from "@/lib/batchManifest";
-import { buildScenarioPlan, type PromptScenario } from "@/lib/scenarioPlan";
+import { assignStyles, buildScenarioPlan, type PromptScenario } from "@/lib/scenarioPlan";
 import { cameraAngleFor } from "@/lib/promptBuilder/camera";
 import {
   MAX_ANGLES,
@@ -97,6 +97,7 @@ type GeneratePayload = {
   ceilingLights?: string[];
   roomSize?: string;
   designStyle?: string;
+  designStyles?: string[];
   colorMood?: string;
   colorIntensity?: number;
   colorPresence?: number;
@@ -225,6 +226,7 @@ function validateGeneratePayloadShape(payload: unknown): string[] {
     "walls",
     "ceilings",
     "ceilingLights",
+    "designStyles",
   ] as const;
 
   arrayFields.forEach((field) => {
@@ -661,10 +663,22 @@ export async function POST(request: Request) {
         ? payload.roomSize
         : (roomSizes[1] ?? "standard room (180-280 sq ft)");
 
-    const styleSelection =
-      typeof payload.designStyle === "string" && styles.includes(payload.designStyle)
-        ? payload.designStyle
-        : (styles[0] ?? "modern");
+    // Several styles are spread evenly across the images; older requests send just `designStyle`.
+    const pickedStyles = Array.isArray(payload.designStyles)
+      ? payload.designStyles.filter(
+          (style, index, all): style is string =>
+            typeof style === "string" && styles.includes(style) && all.indexOf(style) === index
+        )
+      : [];
+    const styleSelections =
+      pickedStyles.length > 0
+        ? pickedStyles
+        : [
+            typeof payload.designStyle === "string" && styles.includes(payload.designStyle)
+              ? payload.designStyle
+              : (styles[0] ?? "modern"),
+          ];
+    const styleSelection = styleSelections[0] as string;
 
     const colorMoodSelection: ColorMood =
       typeof payload.colorMood === "string" &&
@@ -782,6 +796,8 @@ export async function POST(request: Request) {
       ceilingLightSelection,
       roomSizeSelection,
       styleSelection,
+      // Only with several styles, so seeds for single-style batches do not change.
+      ...(styleSelections.length > 1 ? { styleSelections } : {}),
       colorMoodSelection,
       colorIntensitySelection,
       colorStrategySelection,
@@ -826,7 +842,7 @@ export async function POST(request: Request) {
           : wallColorPaletteSelection,
     });
 
-    const scenarios: PromptScenario[] = [];
+    let scenarios: PromptScenario[] = [];
 
     if (useSets) {
       // The planner mixes the rooms together; hand the scenarios back out room by room, in set order.
@@ -859,6 +875,8 @@ export async function POST(request: Request) {
       throw new Error("No prompts could be generated from the selected options");
     }
 
+    scenarios = assignStyles(scenarios, styleSelections, sameHouse);
+
     const prompts = Array.from({ length: maxImages }, (_, index) => {
       const scenario = scenarios[index];
 
@@ -869,7 +887,7 @@ export async function POST(request: Request) {
       const prompt = buildPrompt(
         scenario.room,
         roomSizeSelection,
-        styleSelection,
+        scenario.style ?? styleSelection,
         colorMoodSelection,
         colorIntensitySelection,
         colorStrategySelection,
@@ -897,6 +915,8 @@ export async function POST(request: Request) {
 
     const batchSettings = {
       designStyle: styleSelection,
+      // Only with several styles, so the details saved for single-style batches do not change.
+      ...(styleSelections.length > 1 ? { designStyles: styleSelections.join(", ") } : {}),
       homeQuality: homeQualitySelection,
       condition: conditionSelection,
       camera: cameraSelection,

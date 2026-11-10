@@ -2,14 +2,14 @@ import { colorProfiles, rooms, views } from "./combinations";
 import { buildPrompt } from "./promptBuilder";
 import { getColorPreviewData } from "./promptBuilder/colorPalette";
 import { getDefaultWallColorPalette } from "./wallColorPalette";
-import type { Setup } from "./setup";
+import { effectiveStyles, type Setup } from "./setup";
 
 /** The prompt for the first scenario, as shown in the Prompt Preview panel. */
 export function buildPromptPreview(setup: Setup): string {
   return buildPrompt(
     setup.rooms[0] ?? rooms[0] ?? "living room",
     setup.roomSize,
-    setup.designStyle,
+    effectiveStyles(setup)[0] as string,
     setup.colorMood,
     setup.colorIntensity,
     setup.colorStrategy,

@@ -32,7 +32,7 @@ test("pristine prompts are identical to the saved snapshot taken before Conditio
           continue;
         }
 
-        assert.equal(hash(prompt({ designStyle: style, homeQuality: tier, colorMood: mood })), SNAPSHOT[key], key);
+        assert.equal(hash(prompt({ designStyles: [style], homeQuality: tier, colorMood: mood })), SNAPSHOT[key], key);
         checked += 1;
       }
     }
@@ -164,7 +164,7 @@ test("the palette's color names stay in the prompt at every step", () => {
 
 test("Condition plus Liminal keeps the Liminal lighting and adds the decay lines", () => {
   for (const condition of NEGLECT_UP) {
-    const text = prompt({ condition, designStyle: "liminal spaces" });
+    const text = prompt({ condition, designStyles: ["liminal spaces"] });
 
     assert.match(text, /Flat, even artificial lighting/, condition);
     assert.match(text, /Condition direction \(critical\)/, condition);

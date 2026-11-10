@@ -18,7 +18,7 @@ function prompt(patch: Partial<typeof DEFAULT_SETUP>): string {
   return buildPromptPreview({ ...DEFAULT_SETUP, ...patch });
 }
 
-const liminal = (patch: Partial<typeof DEFAULT_SETUP> = {}) => prompt({ designStyle: "liminal spaces", ...patch });
+const liminal = (patch: Partial<typeof DEFAULT_SETUP> = {}) => prompt({ designStyles: ["liminal spaces"], ...patch });
 
 test("liminal spaces is the only style with an override, and it exists in the style list", () => {
   assert.deepEqual(Object.keys(STYLE_OVERRIDES), ["liminal spaces"]);
@@ -74,7 +74,7 @@ test("Moody Luxury color mood does not bring its lighting into a liminal prompt"
 
 test("every other style keeps the bright shared lighting and staging", () => {
   for (const style of styles.filter((item) => item !== "liminal spaces")) {
-    const text = prompt({ designStyle: style });
+    const text = prompt({ designStyles: [style] });
 
     assert.ok(text.includes(`Ultra realistic ${style} `), style);
 
