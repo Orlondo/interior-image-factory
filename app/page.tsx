@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { AppHeader } from "@/components/streamline/AppHeader";
 import { DetailsSection } from "@/components/streamline/DetailsSection";
+import { AccessorySection } from "@/components/streamline/AccessorySection";
 import { ExteriorSection } from "@/components/streamline/ExteriorSection";
 import { GenerationPanel } from "@/components/streamline/GenerationPanel";
 import { ImageReview } from "@/components/streamline/ImageReview";
@@ -123,6 +124,8 @@ export default function Home() {
           />
 
           <ExteriorSection setup={setup} update={update} />
+
+          <AccessorySection setup={setup} update={update} />
 
           <LookSection
             setup={setup}

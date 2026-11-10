@@ -28,6 +28,11 @@ import {
   type RoomType,
 } from "./combinations";
 import {
+  accessoryOptionGroups,
+  createEmptyAccessoryOptions,
+  type AccessoryOptions,
+} from "./accessoryCombinations";
+import {
   createEmptyExteriorOptions,
   effectivePhotoTypes,
   photoTypeCounts,
@@ -83,10 +88,12 @@ export type Setup = {
   anglesPerRoom: number;
   /** Rooms made to look like one house: shared style, palette and finishes. */
   sameHouse: boolean;
-  /** What the run makes: interior rooms, exterior photos of the home, or both (images are split evenly). */
+  /** What the run makes: interior rooms, exterior photos, accessory close-ups, or a mix (images are split evenly). */
   photoTypes: PhotoType[];
   /** Exterior choices. A group with nothing picked uses every option. */
   exterior: ExteriorOptions;
+  /** Accessory close-up choices. A group with nothing picked uses every option. */
+  accessory: AccessoryOptions;
 };
 
 export type RoomSplitMode = "even" | "custom";
@@ -125,6 +132,7 @@ export const DEFAULT_SETUP: Setup = {
   sameHouse: false,
   photoTypes: ["interior"],
   exterior: createEmptyExteriorOptions(),
+  accessory: createEmptyAccessoryOptions(),
 };
 
 /** The styles a run uses: the picked ones, or the default style when none is picked. */
@@ -183,16 +191,23 @@ export function buildGeneratePayload(setup: Setup) {
     // Only sent when set, so the default payload stays exactly what it was before room sets existed.
     ...(setup.anglesPerRoom > 1 ? { anglesPerRoom: setup.anglesPerRoom } : {}),
     ...(setup.sameHouse ? { sameHouse: true } : {}),
-    // Only sent when exterior photos are on, so the default payload stays what it was before photo types existed.
-    ...(effectivePhotoTypes(setup.photoTypes).includes("exterior")
-      ? { photoTypes: effectivePhotoTypes(setup.photoTypes), exterior: setup.exterior }
+    // Only sent when exterior or accessory photos are on, so the default payload stays what it was before photo types existed.
+    ...(effectivePhotoTypes(setup.photoTypes).some((type) => type !== "interior")
+      ? { photoTypes: effectivePhotoTypes(setup.photoTypes) }
       : {}),
+    ...(effectivePhotoTypes(setup.photoTypes).includes("exterior") ? { exterior: setup.exterior } : {}),
+    ...(effectivePhotoTypes(setup.photoTypes).includes("accessory") ? { accessory: setup.accessory } : {}),
   };
 }
 
 /** How many of a run's images are interior rooms (all of them unless exterior photos are on). */
 export function interiorImageCount(setup: Pick<Setup, "maxImages" | "photoTypes">): number {
   return photoTypeCounts(setup.maxImages, setup.photoTypes).interior;
+}
+
+/** How many of a run's images are accessory close-ups. */
+export function accessoryImageCount(setup: Pick<Setup, "maxImages" | "photoTypes">): number {
+  return photoTypeCounts(setup.maxImages, setup.photoTypes).accessory;
 }
 
 /** How many of a run's images are exterior photos. */
@@ -273,6 +288,7 @@ export function sanitizeSetup(raw: unknown): Setup {
     sameHouse: typeof source.sameHouse === "boolean" ? source.sameHouse : d.sameHouse,
     photoTypes: Array.isArray(source.photoTypes) ? effectivePhotoTypes(source.photoTypes as string[]) : d.photoTypes,
     exterior: sanitizeExterior(source.exterior),
+    accessory: sanitizeAccessory(source.accessory),
   };
 }
 
@@ -286,6 +302,18 @@ function sanitizeExterior(raw: unknown): ExteriorOptions {
   }
 
   return exterior;
+}
+
+/** Reads saved accessory choices, keeping only known options. Nothing picked stays empty (every option). */
+function sanitizeAccessory(raw: unknown): AccessoryOptions {
+  const source = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
+  const accessory = createEmptyAccessoryOptions();
+
+  for (const { key, options } of accessoryOptionGroups) {
+    accessory[key] = listOf(source[key], options, []);
+  }
+
+  return accessory;
 }
 
 function sanitizeRoomSplit(

@@ -1,4 +1,4 @@
-export const photoTypes = ["interior", "exterior"] as const;
+export const photoTypes = ["interior", "exterior", "accessory"] as const;
 export type PhotoType = (typeof photoTypes)[number];
 
 export const exteriorHomeStyles = [
@@ -151,14 +151,14 @@ export function effectivePhotoTypes(picked: readonly string[] | undefined): Phot
 
 /**
  * Splits a run's images evenly across its photo types. The first type gets the extra image when the
- * split is uneven (5 images, interior and exterior: 3 and 2).
+ * split is uneven (5 images, interior and exterior: 3 and 2; 7 images across three types: 3, 2 and 2).
  */
 export function photoTypeCounts(
   total: number,
   picked: readonly string[] | undefined
 ): Record<PhotoType, number> {
   const types = effectivePhotoTypes(picked);
-  const counts: Record<PhotoType, number> = { interior: 0, exterior: 0 };
+  const counts: Record<PhotoType, number> = { interior: 0, exterior: 0, accessory: 0 };
 
   types.forEach((type, index) => {
     counts[type] = Math.floor(total / types.length) + (index < total % types.length ? 1 : 0);

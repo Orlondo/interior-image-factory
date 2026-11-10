@@ -40,6 +40,13 @@ import {
   writePendingManifest,
 } from "@/lib/batchManifest";
 import {
+  accessoryOptionGroups,
+  buildAccessoryPrompt,
+  buildAccessoryScenarios,
+  resolveAccessoryOptions,
+} from "@/lib/accessoryCombinations";
+import {
+  effectivePhotoTypes,
   exteriorOptionGroups,
   photoTypeCounts,
   resolveExteriorOptions,
@@ -106,6 +113,7 @@ type GeneratePayload = {
   designStyles?: string[];
   photoTypes?: string[];
   exterior?: Record<string, string[]>;
+  accessory?: Record<string, string[]>;
   colorMood?: string;
   colorIntensity?: number;
   colorPresence?: number;
@@ -319,6 +327,22 @@ function validateGeneratePayloadShape(payload: unknown): string[] {
 
         if (value !== undefined && !isStringArray(value)) {
           errors.push(`exterior.${key} must be an array of strings.`);
+        }
+      });
+    }
+  }
+
+  if ("accessory" in input && input.accessory !== undefined) {
+    const accessory = input.accessory as unknown;
+
+    if (accessory === null || typeof accessory !== "object" || Array.isArray(accessory)) {
+      errors.push("accessory must be an object.");
+    } else {
+      accessoryOptionGroups.forEach(({ key }) => {
+        const value = (accessory as Record<string, unknown>)[key];
+
+        if (value !== undefined && !isStringArray(value)) {
+          errors.push(`accessory.${key} must be an array of strings.`);
         }
       });
     }
@@ -782,7 +806,9 @@ export async function POST(request: Request) {
     const photoTypeSplit = photoTypeCounts(maxImages, payload.photoTypes);
     const interiorCount = photoTypeSplit.interior;
     const exteriorCount = photoTypeSplit.exterior;
+    const accessoryCount = photoTypeSplit.accessory;
     const exteriorSelection = resolveExteriorOptions(payload.exterior);
+    const accessorySelection = resolveAccessoryOptions(payload.accessory);
 
     if (payload.roomCounts !== undefined && interiorCount > 0) {
       const roomCountsError = validateRoomCounts(payload.roomCounts, roomSelection, interiorCount);
@@ -848,6 +874,7 @@ export async function POST(request: Request) {
       roomCounts: payload.roomCounts ?? null,
       // Only when exterior photos are on, so seeds for interior-only batches do not change.
       ...(exteriorCount > 0 ? { exteriorCount, exteriorSelection } : {}),
+      ...(accessoryCount > 0 ? { accessoryCount, accessorySelection } : {}),
       // Only when set, so seeds for ordinary batches do not change.
       ...(anglesPerRoom > 1 ? { anglesPerRoom } : {}),
       ...(sameHouse ? { sameHouse } : {}),
@@ -952,7 +979,20 @@ export async function POST(request: Request) {
     const exteriorPrompts = exteriorScenarios.map((scenario, index) =>
       buildExteriorPrompt(scenario, homeQualitySelection, interiorCount + index, maxImages)
     );
-    const allPrompts = [...prompts, ...exteriorPrompts];
+
+    // Accessory close-ups come last. With several styles they are spread across the picked styles too.
+    const accessoryScenarios = buildAccessoryScenarios(accessoryCount, accessorySelection, seededRandom);
+    const accessoryPrompts = accessoryScenarios.map((scenario, index) =>
+      buildAccessoryPrompt(
+        scenario,
+        styleSelections[index % styleSelections.length] as string,
+        homeQualitySelection,
+        interiorCount + exteriorCount + index,
+        maxImages
+      )
+    );
+    const extraPrompts = [...exteriorPrompts, ...accessoryPrompts];
+    const allPrompts = [...prompts, ...extraPrompts];
 
     const batchSettings = {
       designStyle: styleSelection,
@@ -975,7 +1015,13 @@ export async function POST(request: Request) {
       ...(anglesPerRoom > 1 ? { anglesPerRoom } : {}),
       ...(sameHouse ? { sameHouse } : {}),
       // Only when exterior photos are on, so the details saved for interior-only batches do not change.
-      ...(exteriorCount > 0 ? { photoTypes: "interior, exterior", exteriorImages: exteriorCount } : {}),
+      ...(exteriorCount > 0 || accessoryCount > 0
+        ? {
+            photoTypes: effectivePhotoTypes(payload.photoTypes).join(", "),
+            ...(exteriorCount > 0 ? { exteriorImages: exteriorCount } : {}),
+            ...(accessoryCount > 0 ? { accessoryImages: accessoryCount } : {}),
+          }
+        : {}),
     };
 
     if (maxImages > BATCH_MODE_THRESHOLD) {
@@ -1001,6 +1047,7 @@ export async function POST(request: Request) {
             settings: batchSettings,
             scenarios,
             exteriors: exteriorScenarios,
+            accessories: accessoryScenarios,
           })
         );
       } catch (error) {
@@ -1057,9 +1104,9 @@ export async function POST(request: Request) {
 
       results.push(...made.map((b64): ImagesResponse => ({ data: b64 ? [{ b64_json: b64 }] : [] })));
 
-      // Exterior photos need no reference image, so they are made after the room sets.
-      for (let i = 0; i < exteriorPrompts.length; i += CONCURRENCY) {
-        const batch = exteriorPrompts.slice(i, i + CONCURRENCY);
+      // Exterior photos and accessory close-ups need no reference image, so they are made after the room sets.
+      for (let i = 0; i < extraPrompts.length; i += CONCURRENCY) {
+        const batch = extraPrompts.slice(i, i + CONCURRENCY);
         results.push(
           ...(await Promise.all(
             batch.map((prompt) => generateImageWithFallback(prompt, quality, size, fallbackSize))
@@ -1092,6 +1139,7 @@ export async function POST(request: Request) {
         settings: batchSettings,
         scenarios,
         exteriors: exteriorScenarios,
+        accessories: accessoryScenarios,
       }),
       savedImages
     );
