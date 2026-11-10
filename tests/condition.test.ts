@@ -26,6 +26,12 @@ test("pristine prompts are identical to the saved snapshot taken before Conditio
       for (const mood of ["Warm Neutral", "Moody Luxury"] as const) {
         const key = `style=${style}|tier=${tier}|mood=${mood}`;
 
+        // A style added after the snapshot was taken (wabi-sabi) has no saved hash. Every saved key is
+        // still checked, and the count assertion below fails if any saved key goes unchecked.
+        if (!(key in SNAPSHOT)) {
+          continue;
+        }
+
         assert.equal(hash(prompt({ designStyle: style, homeQuality: tier, colorMood: mood })), SNAPSHOT[key], key);
         checked += 1;
       }
