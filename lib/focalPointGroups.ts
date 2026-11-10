@@ -17,7 +17,6 @@ const GROUP_DEFINITIONS: Array<{ title: string; entries: Entry[] }> = [
       { startsWith: "floor-to-ceiling marble wall", label: "Marble wall" },
       { startsWith: "mirror tile wall", label: "Mirror tile wall" },
       { startsWith: "single large seamless full-height mirror", label: "Full mirror wall" },
-      { startsWith: "indoor planterium wall", label: "Planterium wall" },
       { startsWith: "TV wall", label: "TV wall" },
       { startsWith: "built-in wine wall", label: "Wine wall" },
     ],
@@ -76,14 +75,12 @@ const GROUP_DEFINITIONS: Array<{ title: string; entries: Entry[] }> = [
     ],
   },
   {
-    title: "Plants, pets & seasonal",
+    title: "Plants & seasonal",
     entries: [
       { startsWith: "fall floral", label: "Fall floral arrangement" },
       { startsWith: "small indoor tree plants", label: "Autumn tree plants" },
       { startsWith: "small cluster of cactus", label: "Cactus cluster" },
       { startsWith: "small potted tree", label: "Potted tree" },
-      { startsWith: "friendly pet dog", label: "Pet dog" },
-      { startsWith: "friendly pet cat", label: "Pet cat" },
     ],
   },
   {
