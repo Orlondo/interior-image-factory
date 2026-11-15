@@ -44,6 +44,12 @@ export const QUICK_SETS: QuickSet[] = [
     label: "Transitional places",
     rooms: ["hallway", "stairwell", "lobby", "waiting room", "empty office", "indoor pool"],
   },
+  // The rooms of a whole-house video, in tour order. The House section turns on the matching exterior shots.
+  {
+    id: "house-tour",
+    label: "House tour",
+    rooms: ["foyer", "living room", "kitchen", "dining room", "bedroom", "bathroom"],
+  },
 ];
 
 /** Keeps only rooms that exist, and drops a set that ends up with fewer than two rooms. */

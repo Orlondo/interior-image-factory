@@ -52,6 +52,18 @@ import {
   resolveExteriorOptions,
 } from "@/lib/exteriorCombinations";
 import { buildExteriorPrompt, buildExteriorScenarios } from "@/lib/exteriorPromptBuilder";
+import {
+  TOUR_MIN_IMAGES,
+  applyOrder,
+  describeHouse,
+  houseExteriorLines,
+  houseProfileLines,
+  isHouseSet,
+  sanitizeHouse,
+  tourCounts,
+  tourExteriors,
+  tourOrder,
+} from "@/lib/houseProfile";
 import { assignStyles, buildScenarioPlan, type PromptScenario } from "@/lib/scenarioPlan";
 import { cameraAngleFor } from "@/lib/promptBuilder/camera";
 import {
@@ -134,6 +146,10 @@ type GeneratePayload = {
   anglesPerRoom?: number;
   /** Rooms made to look like one house. */
   sameHouse?: boolean;
+  /** One saved set of floor, wall, wood, metal, view and palette choices shared by every room. */
+  house?: unknown;
+  /** A whole-house tour: a daytime exterior first, the rooms in order, then the same house at dusk. */
+  houseTour?: boolean;
 };
 
 const FILE_SIZE_TO_QUALITY: Record<FileSizeOption, "low" | "medium" | "high"> = {
@@ -346,6 +362,18 @@ function validateGeneratePayloadShape(payload: unknown): string[] {
         }
       });
     }
+  }
+
+  if ("houseTour" in input && input.houseTour !== undefined && typeof input.houseTour !== "boolean") {
+    errors.push("houseTour must be a boolean.");
+  }
+
+  if (
+    "house" in input &&
+    input.house !== undefined &&
+    (input.house === null || typeof input.house !== "object" || Array.isArray(input.house))
+  ) {
+    errors.push("house must be an object.");
   }
 
   if (
@@ -637,8 +665,14 @@ export async function POST(request: Request) {
           )
         : [];
 
-    const viewSelection =
-      selectedOutsideViews.length > 0
+    // A house profile with a window view locks every room of the house to that view.
+    const houseProfile = sanitizeHouse(payload.house);
+    const houseOn = isHouseSet(houseProfile);
+    const houseTour = payload.houseTour === true;
+
+    const viewSelection = houseProfile.view
+      ? [houseProfile.view]
+      : selectedOutsideViews.length > 0
         ? selectedOutsideViews
         : [views[views.length - 1] ?? "city skyline"];
 
@@ -803,7 +837,20 @@ export async function POST(request: Request) {
 
     // Photo types split the run's images evenly. Everything below that concerns rooms works on the
     // interior share only; exterior photos are added to the same run afterwards.
-    const photoTypeSplit = photoTypeCounts(maxImages, payload.photoTypes);
+    if (houseTour && maxImages < TOUR_MIN_IMAGES) {
+      return NextResponse.json(
+        {
+          error: "Invalid request payload",
+          details: [`A house tour needs at least ${TOUR_MIN_IMAGES} images: two exteriors and the rooms in between.`],
+        },
+        { status: 400 }
+      );
+    }
+
+    // A tour is always two exterior photos (daytime first, dusk last) and rooms in between.
+    const photoTypeSplit = houseTour
+      ? { ...tourCounts(maxImages), accessory: 0 }
+      : photoTypeCounts(maxImages, payload.photoTypes);
     const interiorCount = photoTypeSplit.interior;
     const exteriorCount = photoTypeSplit.exterior;
     const accessoryCount = photoTypeSplit.accessory;
@@ -828,7 +875,7 @@ export async function POST(request: Request) {
 
     const anglesPerRoom =
       typeof payload.anglesPerRoom === "number" ? payload.anglesPerRoom : 1;
-    const sameHouse = payload.sameHouse === true;
+    const sameHouse = payload.sameHouse === true || houseTour;
     const useSets = usesRoomSets(anglesPerRoom, sameHouse);
     const limitMessage = liveLimitMessage(maxImages, anglesPerRoom, sameHouse);
 
@@ -878,6 +925,9 @@ export async function POST(request: Request) {
       // Only when set, so seeds for ordinary batches do not change.
       ...(anglesPerRoom > 1 ? { anglesPerRoom } : {}),
       ...(sameHouse ? { sameHouse } : {}),
+      // Only when set, so seeds for ordinary batches do not change.
+      ...(houseOn ? { house: houseProfile } : {}),
+      ...(houseTour ? { houseTour } : {}),
     });
 
     const seededRandom = createSeededRandom(hashStringToSeed(seedInput));
@@ -971,14 +1021,20 @@ export async function POST(request: Request) {
         scenario.set ? scenario.set.angle : index
       );
 
-      return `${prompt}\n\nVariation ${index + 1} of ${maxImages}.`;
+      const houseLines = houseProfileLines(houseProfile);
+
+      return `${prompt}\n\n${houseLines ? `${houseLines}\n\n` : ""}Variation ${index + 1} of ${maxImages}.`;
     });
 
     // Exterior photos come after the interior images in the run.
-    const exteriorScenarios = buildExteriorScenarios(exteriorCount, exteriorSelection, seededRandom);
-    const exteriorPrompts = exteriorScenarios.map((scenario, index) =>
-      buildExteriorPrompt(scenario, homeQualitySelection, interiorCount + index, maxImages)
-    );
+    const builtExteriors = buildExteriorScenarios(exteriorCount, exteriorSelection, seededRandom);
+    const exteriorScenarios = houseTour ? tourExteriors(builtExteriors) : builtExteriors;
+    const houseExterior = houseExteriorLines(houseProfile);
+    const exteriorPrompts = exteriorScenarios.map((scenario, index) => {
+      const text = buildExteriorPrompt(scenario, homeQualitySelection, interiorCount + index, maxImages);
+
+      return houseExterior ? text.replace(/\n\nVariation /, `\n\n${houseExterior}\n\nVariation `) : text;
+    });
 
     // Accessory close-ups come last. With several styles they are spread across the picked styles too.
     const accessoryScenarios = buildAccessoryScenarios(accessoryCount, accessorySelection, seededRandom);
@@ -992,7 +1048,9 @@ export async function POST(request: Request) {
       )
     );
     const extraPrompts = [...exteriorPrompts, ...accessoryPrompts];
-    const allPrompts = [...prompts, ...extraPrompts];
+    // A tour puts the first exterior first and the second last. Rooms are in tour order already.
+    const runOrder = houseTour ? tourOrder(interiorCount) : null;
+    const allPrompts = runOrder ? applyOrder([...prompts, ...extraPrompts], runOrder) : [...prompts, ...extraPrompts];
 
     const batchSettings = {
       designStyle: styleSelection,
@@ -1014,6 +1072,8 @@ export async function POST(request: Request) {
       // Only when set, so the details saved for ordinary batches do not change.
       ...(anglesPerRoom > 1 ? { anglesPerRoom } : {}),
       ...(sameHouse ? { sameHouse } : {}),
+      ...(houseOn ? { house: describeHouse(houseProfile) } : {}),
+      ...(houseTour ? { houseTour } : {}),
       // Only when exterior photos are on, so the details saved for interior-only batches do not change.
       ...(exteriorCount > 0 || accessoryCount > 0
         ? {
@@ -1048,6 +1108,7 @@ export async function POST(request: Request) {
             scenarios,
             exteriors: exteriorScenarios,
             accessories: accessoryScenarios,
+            ...(runOrder ? { order: runOrder } : {}),
           })
         );
       } catch (error) {
@@ -1126,6 +1187,13 @@ export async function POST(request: Request) {
       }
     }
 
+    if (useSets && runOrder) {
+      // Rooms and exteriors were made as separate groups; put them in tour order.
+      const inTourOrder = applyOrder(results, runOrder);
+      results.length = 0;
+      results.push(...inTourOrder);
+    }
+
     const savedImages = results.flatMap((result, resultIndex) => {
       const b64 = result.data?.find((image) => image.b64_json)?.b64_json;
       return b64 ? [{ index: resultIndex, b64 }] : [];
@@ -1140,6 +1208,7 @@ export async function POST(request: Request) {
         scenarios,
         exteriors: exteriorScenarios,
         accessories: accessoryScenarios,
+        ...(runOrder ? { order: runOrder } : {}),
       }),
       savedImages
     );

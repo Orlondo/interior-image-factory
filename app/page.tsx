@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/streamline/AppHeader";
 import { DetailsSection } from "@/components/streamline/DetailsSection";
 import { AccessorySection } from "@/components/streamline/AccessorySection";
 import { ExteriorSection } from "@/components/streamline/ExteriorSection";
+import { HouseSection } from "@/components/streamline/HouseSection";
 import { GenerationPanel } from "@/components/streamline/GenerationPanel";
 import { ImageReview } from "@/components/streamline/ImageReview";
 import { LookSection } from "@/components/streamline/LookSection";
@@ -122,6 +123,8 @@ export default function Home() {
             isOpen={sections.state.room}
             onToggle={() => sections.toggle("room")}
           />
+
+          <HouseSection setup={setup} update={update} />
 
           <ExteriorSection setup={setup} update={update} />
 

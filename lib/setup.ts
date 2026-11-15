@@ -40,6 +40,7 @@ import {
   type ExteriorOptions,
   type PhotoType,
 } from "./exteriorCombinations";
+import { EMPTY_HOUSE, isHouseSet, sanitizeHouse, type HouseProfile } from "./houseProfile";
 import type { RoomCounts } from "./roomMix";
 import { MAX_ANGLES } from "./roomSets";
 
@@ -88,6 +89,10 @@ export type Setup = {
   anglesPerRoom: number;
   /** Rooms made to look like one house: shared style, palette and finishes. */
   sameHouse: boolean;
+  /** One saved set of floor, wall, wood, metal, window view and palette choices shared by every room. Empty changes nothing. */
+  house: HouseProfile;
+  /** A whole-house tour: a daytime exterior first, the rooms in order, then the same house at dusk. */
+  houseTour: boolean;
   /** What the run makes: interior rooms, exterior photos, accessory close-ups, or a mix (images are split evenly). */
   photoTypes: PhotoType[];
   /** Exterior choices. A group with nothing picked uses every option. */
@@ -130,6 +135,8 @@ export const DEFAULT_SETUP: Setup = {
   roomCounts: {},
   anglesPerRoom: 1,
   sameHouse: false,
+  house: EMPTY_HOUSE,
+  houseTour: false,
   photoTypes: ["interior"],
   exterior: createEmptyExteriorOptions(),
   accessory: createEmptyAccessoryOptions(),
@@ -190,7 +197,10 @@ export function buildGeneratePayload(setup: Setup) {
     ...(customSplit ? { roomCounts: setup.roomCounts } : {}),
     // Only sent when set, so the default payload stays exactly what it was before room sets existed.
     ...(setup.anglesPerRoom > 1 ? { anglesPerRoom: setup.anglesPerRoom } : {}),
-    ...(setup.sameHouse ? { sameHouse: true } : {}),
+    ...(setup.sameHouse || setup.houseTour ? { sameHouse: true } : {}),
+    // Only sent when set, so the default payload stays what it was before house profiles existed.
+    ...(isHouseSet(setup.house) ? { house: setup.house } : {}),
+    ...(setup.houseTour ? { houseTour: true } : {}),
     // Only sent when exterior or accessory photos are on, so the default payload stays what it was before photo types existed.
     ...(effectivePhotoTypes(setup.photoTypes).some((type) => type !== "interior")
       ? { photoTypes: effectivePhotoTypes(setup.photoTypes) }
@@ -286,6 +296,8 @@ export function sanitizeSetup(raw: unknown): Setup {
         ? source.anglesPerRoom
         : d.anglesPerRoom,
     sameHouse: typeof source.sameHouse === "boolean" ? source.sameHouse : d.sameHouse,
+    house: sanitizeHouse(source.house),
+    houseTour: typeof source.houseTour === "boolean" ? source.houseTour : d.houseTour,
     photoTypes: Array.isArray(source.photoTypes) ? effectivePhotoTypes(source.photoTypes as string[]) : d.photoTypes,
     exterior: sanitizeExterior(source.exterior),
     accessory: sanitizeAccessory(source.accessory),

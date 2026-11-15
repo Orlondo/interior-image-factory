@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { LAST_HOUSE_VIEW_KEY } from "./houseProfile";
+import { writeLocalStore } from "./localStore";
 import { buildGeneratePayload, type Setup } from "./setup";
 
 export type GeneratedImage = {
@@ -75,6 +77,10 @@ export function useGeneration() {
     try {
       setGenerationUiState("sending");
       setGenerationStatusMessage("Sending request...");
+
+      if (setup.house.view) {
+        writeLocalStore(LAST_HOUSE_VIEW_KEY, setup.house.view);
+      }
 
       const response = await fetch("/generate", {
         method: "POST",

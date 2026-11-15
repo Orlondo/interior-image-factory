@@ -83,20 +83,13 @@ export function buildPendingManifest(input: {
   exteriors?: ExteriorScenario[];
   /** Accessory close-ups, listed after the exterior photos. */
   accessories?: AccessoryScenario[];
+  /** A house tour reorders the run: entry n is the old position of the image that goes in position n. */
+  order?: number[];
 }): BatchManifest {
   const exteriors = input.exteriors ?? [];
   const accessories = input.accessories ?? [];
 
-  return {
-    version: BATCH_MANIFEST_VERSION,
-    id: safeBatchId(input.id),
-    createdAt: (input.createdAt ?? new Date()).toISOString(),
-    status: "pending",
-    mode: input.mode,
-    requestedImages: input.scenarios.length + exteriors.length + accessories.length,
-    imageCount: 0,
-    settings: input.settings,
-    images: input.scenarios.map((scenario, index): BatchImageEntry => ({
+  const images = input.scenarios.map((scenario, index): BatchImageEntry => ({
       variation: index + 1,
       file: null,
       room: scenario.room,
@@ -140,7 +133,21 @@ export function buildPendingManifest(input: {
         wallColorPalette: "",
         accessory,
       }))
-    ),
+    );
+  const ordered = input.order
+    ? input.order.map((from, position): BatchImageEntry => ({ ...(images[from] as BatchImageEntry), variation: position + 1 }))
+    : images;
+
+  return {
+    version: BATCH_MANIFEST_VERSION,
+    id: safeBatchId(input.id),
+    createdAt: (input.createdAt ?? new Date()).toISOString(),
+    status: "pending",
+    mode: input.mode,
+    requestedImages: input.scenarios.length + exteriors.length + accessories.length,
+    imageCount: 0,
+    settings: input.settings,
+    images: ordered,
   };
 }
 
