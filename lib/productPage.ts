@@ -1,3 +1,5 @@
+import http from "node:http";
+import https from "node:https";
 import { isIP } from "node:net";
 import { lookup } from "node:dns/promises";
 import { guessRooms } from "./products";
@@ -136,37 +138,78 @@ export async function checkPublicUrl(raw: string): Promise<URL> {
   return url;
 }
 
-export async function fetchProduct(raw: string): Promise<PageProduct & { link: string; rooms: string[] }> {
-  const url = await checkPublicUrl(raw);
-  let failure = "";
-  const response = await fetch(url, {
-    // Look like a browser opening a page. Some shops turn away anything that does not.
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9",
-      "Upgrade-Insecure-Requests": "1",
-      "Sec-Fetch-Dest": "document",
-      "Sec-Fetch-Mode": "navigate",
-      "Sec-Fetch-Site": "none",
-    },
-    redirect: "follow",
-    signal: AbortSignal.timeout(12000),
-  }).catch((error: unknown) => {
-    const cause = (error as { cause?: { code?: string } } | null)?.cause?.code;
-    failure = cause || (error as Error | null)?.name || "no answer";
+/** What the video app's reader sends, and nothing more: some shops (Shopify ones answer 430) turn away requests with extra browser-only headers or Node's defaults. */
+const READER_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+  "Accept-Language": "en-US,en;q=0.9",
+  "Accept-Encoding": "identity",
+  Connection: "close",
+};
 
-    return null;
+const MAX_PAGE = 2_000_000;
+const MAX_REDIRECTS = 5;
+
+export type PageResult = { status: number; body: string; url: string };
+
+/**
+ * Gets a page with `node:http(s)` directly (not `fetch`), following redirects by hand and checking every
+ * address on the way. `check` decides which addresses may be opened.
+ */
+export async function getPage(
+  raw: string,
+  check: (url: string) => Promise<URL> = checkPublicUrl,
+  redirects = MAX_REDIRECTS
+): Promise<PageResult> {
+  const url = await check(raw);
+  const client = url.protocol === "https:" ? https : http;
+
+  const result = await new Promise<{ status: number; body: string; location: string }>((resolve, reject) => {
+    const request = client.request(url, { method: "GET", headers: { Host: url.host, ...READER_HEADERS }, timeout: 12000 }, (response) => {
+      const chunks: Buffer[] = [];
+      let size = 0;
+      response.on("data", (chunk: Buffer) => {
+        size += chunk.length;
+        if (size > MAX_PAGE) {
+          request.destroy(new Error("TOO_LARGE"));
+          return;
+        }
+        chunks.push(chunk);
+      });
+      response.on("end", () =>
+        resolve({ status: response.statusCode ?? 0, body: Buffer.concat(chunks).toString("utf8"), location: String(response.headers.location ?? "") })
+      );
+      response.on("error", reject);
+    });
+    request.on("timeout", () => request.destroy(new Error("TIMEOUT")));
+    request.on("error", reject);
+    request.end();
   });
 
-  if (!response || !response.ok) {
+  if (result.status >= 300 && result.status < 400 && result.location) {
+    if (redirects <= 0) throw new ProductPageError("That link redirects too many times");
+
+    return getPage(new URL(result.location, url).toString(), check, redirects - 1);
+  }
+
+  return { status: result.status, body: result.body, url: url.toString() };
+}
+
+export async function fetchProduct(raw: string): Promise<PageProduct & { link: string; rooms: string[] }> {
+  let page: PageResult;
+
+  try {
+    page = await getPage(raw);
+  } catch (error) {
+    if (error instanceof ProductPageError) throw error;
+    const reason = (error as { code?: string } | null)?.code ?? (error as Error | null)?.message ?? "no answer";
+    throw new ProductPageError(`The page could not be opened (${reason}). Some shops block automated visits; type the details in instead`);
+  }
+  if (page.status < 200 || page.status >= 300) {
     throw new ProductPageError(
-      `The page could not be opened (${response ? `the shop answered ${response.status}` : failure}). ` +
-        "Some shops block automated visits; type the details in instead"
+      `The page could not be opened (the shop answered ${page.status}). Some shops block automated visits; type the details in instead`
     );
   }
-  const page = (await response.text()).slice(0, 2_000_000);
-  const product = parseProductPage(page, response.url || url.toString());
+  const product = parseProductPage(page.body, page.url);
 
-  return { ...product, link: response.url || url.toString(), rooms: guessRooms(product.name) };
+  return { ...product, link: page.url, rooms: guessRooms(product.name) };
 }

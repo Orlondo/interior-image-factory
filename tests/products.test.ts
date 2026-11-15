@@ -76,3 +76,34 @@ test("only public web addresses are opened", async () => {
     await assert.rejects(() => checkPublicUrl(bad), bad);
   }
 });
+
+import http from "node:http";
+import { getPage } from "../lib/productPage";
+
+test("the reader sends only the plain headers and follows redirects", async () => {
+  const seen: http.IncomingHttpHeaders[] = [];
+  const server = http.createServer((req, res) => {
+    seen.push(req.headers);
+    if (req.url === "/start") {
+      res.writeHead(302, { Location: "/final" });
+      res.end();
+    } else {
+      res.writeHead(200, { "Content-Type": "text/html" });
+      res.end("<title>Sofa</title>");
+    }
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = (server.address() as { port: number }).port;
+  try {
+    const page = await getPage(`http://127.0.0.1:${port}/start`, async (raw) => new URL(raw));
+    assert.equal(page.status, 200);
+    assert.ok(page.body.includes("Sofa"));
+    assert.ok(page.url.endsWith("/final"));
+    const headers = seen[1] ?? {};
+    assert.equal(headers["accept-encoding"], "identity");
+    assert.equal("sec-fetch-mode" in headers, false);
+    assert.equal("accept" in headers, false);
+  } finally {
+    server.close();
+  }
+});
