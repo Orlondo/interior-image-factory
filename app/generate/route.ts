@@ -64,6 +64,15 @@ import {
   tourExteriors,
   tourOrder,
 } from "@/lib/houseProfile";
+import {
+  describeProducts,
+  productForImage,
+  productLines,
+  productRef,
+  sanitizeProductEvery,
+  sanitizeProducts,
+  type Product,
+} from "@/lib/products";
 import { describeWallArt, isWallArtSet, sanitizeWallArt, wallArtLines } from "@/lib/wallArt";
 import {
   describeDetails,
@@ -161,6 +170,8 @@ type GeneratePayload = {
   houseTour?: boolean;
   details?: unknown;
   wallArt?: unknown;
+  products?: unknown;
+  productEvery?: number;
   detailColors?: unknown;
   detailsPerImage?: number;
 };
@@ -687,6 +698,8 @@ export async function POST(request: Request) {
     const houseOn = isHouseSet(houseProfile);
     const houseTour = payload.houseTour === true;
     const wallArt = sanitizeWallArt(payload.wallArt);
+    const pickedProducts = sanitizeProducts(payload.products);
+    const productEvery = sanitizeProductEvery(payload.productEvery);
     const pickedDetails = sanitizeDetails(payload.details);
     const pickedDetailColors = sanitizeDetailColors(payload.detailColors);
     const detailsPerImage = sanitizeDetailsPerImage(payload.detailsPerImage);
@@ -950,6 +963,7 @@ export async function POST(request: Request) {
       ...(houseOn ? { house: houseProfile } : {}),
       ...(houseTour ? { houseTour } : {}),
       ...(isWallArtSet(wallArt) ? { wallArt } : {}),
+      ...(pickedProducts.length > 0 ? { products: pickedProducts.map((p) => p.id), productEvery } : {}),
       ...(pickedDetails.length > 0 ? { details: pickedDetails, detailColors: pickedDetailColors, detailsPerImage } : {}),
     });
 
@@ -1011,6 +1025,28 @@ export async function POST(request: Request) {
 
     scenarios = assignStyles(scenarios, styleSelections, sameHouse);
 
+    // Each image's product (a look-alike of one of the person's items), by scenario index. Every angle of a
+    // room set shows the same product as the set's first image, so one room is one room.
+    const imageProducts: (Product | null)[] = [];
+    const roomCounts = new Map<string, number>();
+    const setProducts = new Map<number, Product | null>();
+    scenarios.forEach((scenario) => {
+      if (pickedProducts.length === 0) {
+        imageProducts.push(null);
+        return;
+      }
+      const setNumber = scenario.set?.number;
+      if (setNumber !== undefined && setProducts.has(setNumber)) {
+        imageProducts.push(setProducts.get(setNumber) ?? null);
+        return;
+      }
+      const seen = roomCounts.get(scenario.room) ?? 0;
+      roomCounts.set(scenario.room, seen + 1);
+      const chosen = productForImage(pickedProducts, scenario.room, seen, productEvery);
+      if (setNumber !== undefined) setProducts.set(setNumber, chosen);
+      imageProducts.push(chosen);
+    });
+
     const prompts = Array.from({ length: interiorCount }, (_, index) => {
       const scenario = scenarios[index];
 
@@ -1049,7 +1085,8 @@ export async function POST(request: Request) {
       const detailLines = roomDetailLines(
         detailsForImage(pickedDetails, scenario.room, slot, detailsPerImage, pickedDetailColors)
       );
-      const extras = [houseLines, detailLines, wallArtLines(wallArt, slot)].filter(Boolean).join("\n\n");
+      const product = imageProducts[index] ?? null;
+      const extras = [houseLines, detailLines, wallArtLines(wallArt, slot), productLines(product)].filter(Boolean).join("\n\n");
 
       return `${prompt}\n\n${extras ? `${extras}\n\n` : ""}Variation ${index + 1} of ${maxImages}.`;
     });
@@ -1103,6 +1140,7 @@ export async function POST(request: Request) {
       ...(houseOn ? { house: describeHouse(houseProfile) } : {}),
       ...(houseTour ? { houseTour } : {}),
       ...(isWallArtSet(wallArt) ? { wallArt: describeWallArt(wallArt) } : {}),
+      ...(pickedProducts.length > 0 ? { products: describeProducts(pickedProducts) } : {}),
       ...(pickedDetails.length > 0 ? { details: describeDetails(pickedDetails) } : {}),
       // Only when exterior photos are on, so the details saved for interior-only batches do not change.
       ...(exteriorCount > 0 || accessoryCount > 0
@@ -1139,6 +1177,7 @@ export async function POST(request: Request) {
             exteriors: exteriorScenarios,
             accessories: accessoryScenarios,
             ...(runOrder ? { order: runOrder } : {}),
+            ...(pickedProducts.length > 0 ? { products: imageProducts.map((p) => (p ? productRef(p) : null)) } : {}),
           })
         );
       } catch (error) {
@@ -1239,6 +1278,7 @@ export async function POST(request: Request) {
         exteriors: exteriorScenarios,
         accessories: accessoryScenarios,
         ...(runOrder ? { order: runOrder } : {}),
+        ...(pickedProducts.length > 0 ? { products: imageProducts.map((p) => (p ? productRef(p) : null)) } : {}),
       }),
       savedImages
     );

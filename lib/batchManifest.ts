@@ -8,6 +8,7 @@ import type { PromptScenario } from "./scenarioPlan";
  * the video studio, read this folder; nothing here depends on them.
  */
 
+import type { ProductRef } from "./products";
 import type { AccessoryScenario } from "./accessoryCombinations";
 import type { ExteriorScenario } from "./exteriorPromptBuilder";
 
@@ -33,6 +34,8 @@ export type BatchImageEntry = {
   accessory?: AccessoryScenario;
   /** Set only when several styles were picked. */
   style?: string;
+  /** Set only when the image includes one of the person's products (a look-alike): the video app lists it. */
+  product?: ProductRef;
   /** Set only for room angles: which room set (1-based), which angle of it (0 = the first), and its size. */
   set?: { number: number; angle: number; size: number };
 };
@@ -85,6 +88,8 @@ export function buildPendingManifest(input: {
   accessories?: AccessoryScenario[];
   /** A house tour reorders the run: entry n is the old position of the image that goes in position n. */
   order?: number[];
+  /** The product each interior image includes (by scenario index), or null. */
+  products?: (ProductRef | null)[];
 }): BatchManifest {
   const exteriors = input.exteriors ?? [];
   const accessories = input.accessories ?? [];
@@ -103,6 +108,7 @@ export function buildPendingManifest(input: {
       wallColorPalette: scenario.wallColorPalette,
       ...(scenario.style ? { style: scenario.style } : {}),
       ...(scenario.set ? { set: scenario.set } : {}),
+      ...(input.products?.[index] ? { product: input.products[index] as ProductRef } : {}),
     })).concat(
       exteriors.map((exterior, offset): BatchImageEntry => ({
         variation: input.scenarios.length + offset + 1,

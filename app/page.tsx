@@ -7,6 +7,7 @@ import { AccessorySection } from "@/components/streamline/AccessorySection";
 import { ExteriorSection } from "@/components/streamline/ExteriorSection";
 import { HouseSection } from "@/components/streamline/HouseSection";
 import { RoomDetailsSection } from "@/components/streamline/RoomDetailsSection";
+import { ProductsSection } from "@/components/streamline/ProductsSection";
 import { GenerationPanel } from "@/components/streamline/GenerationPanel";
 import { ImageReview } from "@/components/streamline/ImageReview";
 import { LookSection } from "@/components/streamline/LookSection";
@@ -127,6 +128,7 @@ export default function Home() {
 
           <HouseSection setup={setup} update={update} />
           <RoomDetailsSection setup={setup} update={update} />
+          <ProductsSection setup={setup} update={update} />
 
           <ExteriorSection setup={setup} update={update} />
 
