@@ -96,7 +96,7 @@ test("built-in Looks are grouped, each exactly once, and the new Looks use the n
 
   assert.equal(new Set(grouped).size, grouped.length, "no Look listed twice");
   assert.deepEqual([...grouped].sort(), BUILT_IN_LOOKS.map((look) => look.id).sort());
-  assert.equal(BUILT_IN_LOOKS.length, 24);
+  assert.equal(BUILT_IN_LOOKS.length, 25);
 
   const usedMoods = new Set(BUILT_IN_LOOKS.map((look) => look.values.colorMood));
   for (const mood of NEW_MOODS) assert.ok(usedMoods.has(mood), `${mood} has a Look`);

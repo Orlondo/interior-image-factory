@@ -9,7 +9,9 @@ import { buildGeneratePayload, DEFAULT_SETUP, sanitizeSetup } from "../lib/setup
 
 type Patch = Partial<typeof DEFAULT_SETUP>;
 
-const prompt = (patch: Patch) => buildPromptPreview({ ...DEFAULT_SETUP, ...patch });
+// The saved prompt snapshot was taken with the earlier color defaults, so they are pinned here.
+const prompt = (patch: Patch) =>
+  buildPromptPreview({ ...DEFAULT_SETUP, colorStrategy: "Designer Layered", colorCoverage: "Architectural Surfaces", ...patch });
 const hash = (text: string) => createHash("sha256").update(text).digest("hex").slice(0, 16);
 const words = (text: string) => text.split(/\s+/).filter(Boolean).length;
 

@@ -85,10 +85,11 @@ function look(
   };
 }
 
-export const DEFAULT_LOOK_ID = "designer-layered";
+export const DEFAULT_LOOK_ID = "neutral-decor";
 
 const BASE_LOOKS: Look[] = [
-  look("designer-layered", "Designer Layered", "Layered designer palette on architectural surfaces (the default).", "Warm Neutral", "Designer Layered", "Architectural Surfaces", "Auto", 25),
+  look("neutral-decor", "Neutral & Decor", "A neutral base with color kept to decor (the default).", "Warm Neutral", "Neutral Base", "Decor Only", "Auto", 25),
+  look("designer-layered", "Designer Layered", "Layered designer palette on architectural surfaces (the previous default).", "Warm Neutral", "Designer Layered", "Architectural Surfaces", "Auto", 25),
   look("warm-neutral-classic", "Warm Neutral Classic", "Calm warm neutrals with color kept to decor.", "Warm Neutral", "Neutral Base", "Decor Only", "Auto", 15),
   look("organic-earthy", "Organic Earthy", "Nature-inspired earth tones spread softly through the room.", "Organic Earthy", "Nature Inspired", "Softly Distributed", "Earthy Mixed", 50),
   look("light-airy", "Light & Airy", "Bright rooms with a gentle accent color.", "Light & Airy", "Accent Color", "Softly Distributed", "Auto", 25),
@@ -120,6 +121,8 @@ function d(w: string[], c: string[], l: string[]): LookDetails {
 
 /** Details each built-in Look sets. Every value must be a real option (tested). */
 const LOOK_DETAILS: Record<string, LookDetails> = {
+  // the new default keeps the walls, ceiling and lights the app has always started with
+  "neutral-decor": d(["wallpaper walls"], ["smooth white ceiling"], ["recessed downlights"]),
   "designer-layered": d(["wallpaper walls"], ["smooth white ceiling"], ["recessed downlights"]),
   "warm-neutral-classic": d(["textured plaster walls"], ["smooth white ceiling"], ["recessed downlights"]),
   "organic-earthy": d(["textured plaster walls"], ["wood beam ceiling"], ["architectural pendant lights"]),
@@ -186,7 +189,7 @@ export function getLookDetails(setup: Setup): LookDetails {
 export const LOOK_GROUPS: { label: string; ids: string[] }[] = [
   {
     label: "Calm & neutral",
-    ids: ["warm-neutral-classic", "light-airy", "coastal", "monochrome-tonal", "soft-pastel", "cool-modern"],
+    ids: ["neutral-decor", "warm-neutral-classic", "light-airy", "coastal", "monochrome-tonal", "soft-pastel", "cool-modern"],
   },
   {
     label: "Natural & earthy",

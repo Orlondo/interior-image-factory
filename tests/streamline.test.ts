@@ -36,7 +36,7 @@ import {
 import { DEFAULT_SETUP, buildGeneratePayload, sanitizeSetup, type Setup } from "../lib/setup";
 import { buildPrompt } from "../lib/promptBuilder";
 
-test("default payload is identical to what the page sent before the redesign", () => {
+test("default payload matches what the page sends by default (neutral base, decor-only color)", () => {
   assert.deepEqual(buildGeneratePayload(DEFAULT_SETUP), {
     rooms: ["living room"],
     outsideViews: [views[0]],
@@ -49,8 +49,8 @@ test("default payload is identical to what the page sent before the redesign", (
     roomSize: "standard room (180-280 sq ft)",
     designStyle: "modern",
     colorMood: "Warm Neutral",
-    colorStrategy: "Designer Layered",
-    colorCoverage: "Architectural Surfaces",
+    colorStrategy: "Neutral Base",
+    colorCoverage: "Decor Only",
     heroColor: "Auto",
     colorIntensity: 25,
     colorPresence: 25,

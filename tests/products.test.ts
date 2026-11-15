@@ -107,3 +107,13 @@ test("the reader sends only the plain headers and follows redirects", async () =
     server.close();
   }
 });
+
+test("new setups start with a neutral base and decor-only color; saved ones keep theirs", () => {
+  assert.equal(DEFAULT_SETUP.colorStrategy, "Neutral Base");
+  assert.equal(DEFAULT_SETUP.colorCoverage, "Decor Only");
+  const saved = sanitizeSetup({ ...DEFAULT_SETUP, colorStrategy: "Designer Layered", colorCoverage: "Architectural Surfaces" });
+  assert.equal(saved.colorStrategy, "Designer Layered");
+  assert.equal(saved.colorCoverage, "Architectural Surfaces");
+  // color intensity is untouched
+  assert.equal(sanitizeSetup({}).colorIntensity, DEFAULT_SETUP.colorIntensity);
+});

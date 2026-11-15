@@ -1,8 +1,6 @@
 import {
   AUTO_PALETTE_VARIATION_DEFAULT,
-  COLOR_COVERAGE_DEFAULT,
   COLOR_INTENSITY_DEFAULT,
-  COLOR_STRATEGY_DEFAULT,
   HERO_COLOR_DEFAULT,
   ceilingLights,
   ceilings,
@@ -132,8 +130,10 @@ export const DEFAULT_SETUP: Setup = {
   roomSize: roomSizes[1] ?? "standard room (180-280 sq ft)",
   designStyles: [styles[0] ?? "modern"],
   colorMood: colorMoods[0] ?? "Warm Neutral",
-  colorStrategy: COLOR_STRATEGY_DEFAULT,
-  colorCoverage: COLOR_COVERAGE_DEFAULT,
+  // New setups start neutral with color kept to decor. Saved setups keep their own values, and the generate
+  // route's fallback for a request that sends neither is unchanged (COLOR_*_DEFAULT), so old batches replay the same.
+  colorStrategy: "Neutral Base",
+  colorCoverage: "Decor Only",
   heroColor: HERO_COLOR_DEFAULT,
   colorIntensity: COLOR_INTENSITY_DEFAULT,
   autoPaletteVariation: AUTO_PALETTE_VARIATION_DEFAULT,
