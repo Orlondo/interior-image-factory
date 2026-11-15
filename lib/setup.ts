@@ -41,6 +41,7 @@ import {
   type PhotoType,
 } from "./exteriorCombinations";
 import { sanitizeDetailColors, sanitizeDetails, sanitizeDetailsPerImage, DETAILS_PER_IMAGE_DEFAULT } from "./roomDetails";
+import { EMPTY_WALL_ART, isWallArtSet, sanitizeWallArt, type WallArt } from "./wallArt";
 import { EMPTY_HOUSE, isHouseSet, sanitizeHouse, type HouseProfile } from "./houseProfile";
 import type { RoomCounts } from "./roomMix";
 import { MAX_ANGLES } from "./roomSets";
@@ -98,6 +99,8 @@ export type Setup = {
   details: string[];
   detailColors: string[];
   detailsPerImage: number;
+  /** Wall art subject and pieces per room. Empty = exactly as before. */
+  wallArt: WallArt;
   /** What the run makes: interior rooms, exterior photos, accessory close-ups, or a mix (images are split evenly). */
   photoTypes: PhotoType[];
   /** Exterior choices. A group with nothing picked uses every option. */
@@ -145,6 +148,7 @@ export const DEFAULT_SETUP: Setup = {
   details: [],
   detailColors: [],
   detailsPerImage: DETAILS_PER_IMAGE_DEFAULT,
+  wallArt: EMPTY_WALL_ART,
   photoTypes: ["interior"],
   exterior: createEmptyExteriorOptions(),
   accessory: createEmptyAccessoryOptions(),
@@ -209,6 +213,7 @@ export function buildGeneratePayload(setup: Setup) {
     // Only sent when set, so the default payload stays what it was before house profiles existed.
     ...(isHouseSet(setup.house) ? { house: setup.house } : {}),
     ...(setup.houseTour ? { houseTour: true } : {}),
+    ...(isWallArtSet(setup.wallArt) ? { wallArt: setup.wallArt } : {}),
     ...(setup.details.length > 0
       ? { details: setup.details, detailColors: setup.detailColors, detailsPerImage: setup.detailsPerImage }
       : {}),
@@ -312,6 +317,7 @@ export function sanitizeSetup(raw: unknown): Setup {
     details: sanitizeDetails(source.details),
     detailColors: sanitizeDetailColors(source.detailColors),
     detailsPerImage: sanitizeDetailsPerImage(source.detailsPerImage),
+    wallArt: sanitizeWallArt(source.wallArt),
     photoTypes: Array.isArray(source.photoTypes) ? effectivePhotoTypes(source.photoTypes as string[]) : d.photoTypes,
     exterior: sanitizeExterior(source.exterior),
     accessory: sanitizeAccessory(source.accessory),

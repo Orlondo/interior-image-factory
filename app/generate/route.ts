@@ -64,6 +64,7 @@ import {
   tourExteriors,
   tourOrder,
 } from "@/lib/houseProfile";
+import { describeWallArt, isWallArtSet, sanitizeWallArt, wallArtLines } from "@/lib/wallArt";
 import {
   describeDetails,
   detailsForImage,
@@ -159,6 +160,7 @@ type GeneratePayload = {
   /** A whole-house tour: a daytime exterior first, the rooms in order, then the same house at dusk. */
   houseTour?: boolean;
   details?: unknown;
+  wallArt?: unknown;
   detailColors?: unknown;
   detailsPerImage?: number;
 };
@@ -684,6 +686,7 @@ export async function POST(request: Request) {
     const houseProfile = sanitizeHouse(payload.house);
     const houseOn = isHouseSet(houseProfile);
     const houseTour = payload.houseTour === true;
+    const wallArt = sanitizeWallArt(payload.wallArt);
     const pickedDetails = sanitizeDetails(payload.details);
     const pickedDetailColors = sanitizeDetailColors(payload.detailColors);
     const detailsPerImage = sanitizeDetailsPerImage(payload.detailsPerImage);
@@ -946,6 +949,7 @@ export async function POST(request: Request) {
       // Only when set, so seeds for ordinary batches do not change.
       ...(houseOn ? { house: houseProfile } : {}),
       ...(houseTour ? { houseTour } : {}),
+      ...(isWallArtSet(wallArt) ? { wallArt } : {}),
       ...(pickedDetails.length > 0 ? { details: pickedDetails, detailColors: pickedDetailColors, detailsPerImage } : {}),
     });
 
@@ -1045,7 +1049,7 @@ export async function POST(request: Request) {
       const detailLines = roomDetailLines(
         detailsForImage(pickedDetails, scenario.room, slot, detailsPerImage, pickedDetailColors)
       );
-      const extras = [houseLines, detailLines].filter(Boolean).join("\n\n");
+      const extras = [houseLines, detailLines, wallArtLines(wallArt, slot)].filter(Boolean).join("\n\n");
 
       return `${prompt}\n\n${extras ? `${extras}\n\n` : ""}Variation ${index + 1} of ${maxImages}.`;
     });
@@ -1098,6 +1102,7 @@ export async function POST(request: Request) {
       ...(sameHouse ? { sameHouse } : {}),
       ...(houseOn ? { house: describeHouse(houseProfile) } : {}),
       ...(houseTour ? { houseTour } : {}),
+      ...(isWallArtSet(wallArt) ? { wallArt: describeWallArt(wallArt) } : {}),
       ...(pickedDetails.length > 0 ? { details: describeDetails(pickedDetails) } : {}),
       // Only when exterior photos are on, so the details saved for interior-only batches do not change.
       ...(exteriorCount > 0 || accessoryCount > 0

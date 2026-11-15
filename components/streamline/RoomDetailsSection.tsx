@@ -9,6 +9,7 @@ import {
   describeDetails,
   detailsInGroup,
 } from "@/lib/roomDetails";
+import { MIX_IT_UP, PIECES_MIX, WALL_ART_PIECES_MAX, describeWallArt, wallArtSubjects } from "@/lib/wallArt";
 import type { Setup } from "@/lib/setup";
 import { SelectField } from "./fields";
 import { SectionCard } from "./SectionCard";
@@ -29,7 +30,10 @@ function toggle(list: readonly string[], value: string): string[] {
  */
 export function RoomDetailsSection({ setup, update }: RoomDetailsSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const summary = describeDetails(setup.details);
+  const art = setup.wallArt;
+  const summary = [describeDetails(setup.details), describeWallArt(art) && `art: ${describeWallArt(art)}`]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <SectionCard
@@ -71,6 +75,46 @@ export function RoomDetailsSection({ setup, update }: RoomDetailsSectionProps) {
           </p>
         </div>
 
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-[#98A2B3]">Wall art subject</p>
+          <ChipGroup
+            options={[...wallArtSubjects, MIX_IT_UP].map((subject) => ({ value: subject, label: subject }))}
+            selectedValues={art.subjects}
+            onToggleValue={(subject) =>
+              update({
+                wallArt: {
+                  ...art,
+                  subjects:
+                    subject === MIX_IT_UP
+                      ? art.subjects.includes(MIX_IT_UP) ? [] : [MIX_IT_UP]
+                      : toggle(art.subjects.filter((item) => item !== MIX_IT_UP), subject),
+                },
+              })
+            }
+            ariaLabel="Wall art subject"
+          />
+          <p className="text-xs text-[#98A2B3]">
+            Pick several to spread them across your images, or Mix it up to vary the subject every image. Nothing
+            picked leaves wall art as it is today.
+          </p>
+        </div>
+
+        <SelectField
+          label="Pieces of wall art per room"
+          value={art.pieces === null ? "" : String(art.pieces)}
+          onChange={(value) =>
+            update({ wallArt: { ...art, pieces: value === "" ? null : value === PIECES_MIX ? PIECES_MIX : Number(value) } })
+          }
+        >
+          <option value="">Not set (as today)</option>
+          <option value={PIECES_MIX}>Mix (varies by image)</option>
+          {Array.from({ length: WALL_ART_PIECES_MAX }, (_, index) => index + 1).map((count) => (
+            <option key={count} value={count}>
+              {count}
+            </option>
+          ))}
+        </SelectField>
+
         <SelectField
           label="Details per image"
           value={String(setup.detailsPerImage)}
@@ -83,13 +127,13 @@ export function RoomDetailsSection({ setup, update }: RoomDetailsSectionProps) {
           ))}
         </SelectField>
 
-        {setup.details.length > 0 ? (
+        {setup.details.length > 0 || art.subjects.length > 0 || art.pieces !== null ? (
           <button
             type="button"
             className="text-xs text-[#98A2B3] underline hover:text-[#F5F7FA]"
-            onClick={() => update({ details: [], detailColors: [] })}
+            onClick={() => update({ details: [], detailColors: [], wallArt: { subjects: [], pieces: null } })}
           >
-            Clear room details
+            Clear room details and wall art
           </button>
         ) : null}
       </div>
