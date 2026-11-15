@@ -138,15 +138,31 @@ export async function checkPublicUrl(raw: string): Promise<URL> {
 
 export async function fetchProduct(raw: string): Promise<PageProduct & { link: string; rooms: string[] }> {
   const url = await checkPublicUrl(raw);
+  let failure = "";
   const response = await fetch(url, {
-    headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Safari/605.1.15", "Accept-Language": "en-US,en;q=0.9" },
+    // Look like a browser opening a page. Some shops turn away anything that does not.
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Upgrade-Insecure-Requests": "1",
+      "Sec-Fetch-Dest": "document",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Site": "none",
+    },
     redirect: "follow",
     signal: AbortSignal.timeout(12000),
-  }).catch(() => null);
+  }).catch((error: unknown) => {
+    const cause = (error as { cause?: { code?: string } } | null)?.cause?.code;
+    failure = cause || (error as Error | null)?.name || "no answer";
+
+    return null;
+  });
 
   if (!response || !response.ok) {
     throw new ProductPageError(
-      `The page could not be opened${response ? ` (${response.status})` : ""}. Some shops block automated visits; type the details in instead`
+      `The page could not be opened (${response ? `the shop answered ${response.status}` : failure}). ` +
+        "Some shops block automated visits; type the details in instead"
     );
   }
   const page = (await response.text()).slice(0, 2_000_000);
