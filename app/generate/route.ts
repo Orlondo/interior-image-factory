@@ -68,11 +68,13 @@ import {
   describeProducts,
   productForImage,
   productLines,
+  productPhotoNote,
   productRef,
   sanitizeProductEvery,
   sanitizeProducts,
   type Product,
 } from "@/lib/products";
+import { fetchProductPhotos, type ProductPhoto } from "@/lib/productPhoto";
 import { describeWallArt, isWallArtSet, sanitizeWallArt, wallArtLines } from "@/lib/wallArt";
 import {
   describeDetails,
@@ -172,6 +174,7 @@ type GeneratePayload = {
   wallArt?: unknown;
   products?: unknown;
   productEvery?: number;
+  productMatch?: boolean;
   detailColors?: unknown;
   detailsPerImage?: number;
 };
@@ -537,13 +540,18 @@ async function generateWithRateLimitRetry(input: {
   }));
 }
 
-/** Makes a new image from a reference image and a prompt (the edits endpoint). */
+/** A picture sent with an edit: the room to keep, and/or a product photo. */
+type Reference = { b64: string; mime: string; name: string };
+
+const roomReference = (b64: string): Reference => ({ b64, mime: "image/png", name: "reference.png" });
+
+/** Makes a new image from reference images and a prompt (the edits endpoint). */
 async function editWithRateLimitRetry(input: {
   model: string;
   prompt: string;
   quality: "low" | "medium" | "high";
   size: string;
-  referenceB64: string;
+  references: Reference[];
 }): Promise<ImagesResponse> {
   return sendImageRequest("edits", () => {
     const form = new FormData();
@@ -551,11 +559,10 @@ async function editWithRateLimitRetry(input: {
     form.append("prompt", input.prompt);
     form.append("quality", input.quality);
     form.append("size", input.size);
-    form.append(
-      "image[]",
-      new Blob([Buffer.from(input.referenceB64, "base64")], { type: "image/png" }),
-      "reference.png"
-    );
+    // The room reference comes first, then the product photo (if any): the prompt names them in that order.
+    input.references.forEach((reference) => {
+      form.append("image[]", new Blob([Buffer.from(reference.b64, "base64")], { type: reference.mime }), reference.name);
+    });
 
     return { body: form, headers: {} };
   });
@@ -601,7 +608,7 @@ function paletteIndexFor(index: number, scenario: PromptScenario, sameHouse: boo
 
 async function editImageWithFallback(
   prompt: string,
-  referenceB64: string,
+  references: Reference[],
   quality: "low" | "medium" | "high",
   size: `${number}x${number}`,
   fallbackSize: "1024x1024" | "1536x1024" | "1024x1536"
@@ -612,7 +619,7 @@ async function editImageWithFallback(
       prompt,
       quality,
       size,
-      referenceB64,
+      references,
     });
   } catch (error) {
     const message = extractErrorMessage(error).toLowerCase();
@@ -631,8 +638,40 @@ async function editImageWithFallback(
       prompt,
       quality,
       size: fallbackSize,
-      referenceB64,
+      references,
     });
+  }
+}
+
+/**
+ * Makes an image that includes a product, showing the generator the product's photo (after the room
+ * reference, when there is one). If the photo is turned away, it is made from words instead, as a look-alike.
+ */
+async function makeWithProductPhoto(input: {
+  prompt: string;
+  wordsPrompt: string;
+  photo: ProductPhoto;
+  roomB64: string | null;
+  quality: "low" | "medium" | "high";
+  size: `${number}x${number}`;
+  fallbackSize: "1024x1024" | "1536x1024" | "1024x1536";
+}): Promise<ImagesResponse> {
+  const { photo, roomB64, quality, size, fallbackSize } = input;
+  const references = [
+    ...(roomB64 ? [roomReference(roomB64)] : []),
+    { b64: photo.b64, mime: photo.mime, name: `product.${photo.extension}` },
+  ];
+
+  try {
+    return await editImageWithFallback(input.prompt + productPhotoNote(roomB64 !== null), references, quality, size, fallbackSize);
+  } catch (error) {
+    const status = (error as { status?: number }).status;
+
+    if (status !== 400 && status !== 404) throw error;
+
+    return roomB64
+      ? editImageWithFallback(input.wordsPrompt, [roomReference(roomB64)], quality, size, fallbackSize)
+      : generateImageWithFallback(input.wordsPrompt, quality, size, fallbackSize);
   }
 }
 
@@ -1047,6 +1086,19 @@ export async function POST(request: Request) {
       imageProducts.push(chosen);
     });
 
+    // With "Match the product photo" on, each product's picture is downloaded (safely) so the generator can
+    // be shown the real item. Batch mode cannot take reference pictures, and a picture that cannot be had
+    // leaves that product a look-alike made from words.
+    const matchProducts = payload.productMatch !== false && maxImages <= BATCH_MODE_THRESHOLD && imageProducts.some(Boolean);
+    const productPhotos = matchProducts
+      ? await fetchProductPhotos(imageProducts.map((product) => product?.image ?? ""))
+      : new Map<string, ProductPhoto>();
+    const photoFor = (index: number): ProductPhoto | null => {
+      const product = imageProducts[index];
+
+      return product ? (productPhotos.get(product.image) ?? null) : null;
+    };
+
     const prompts = Array.from({ length: interiorCount }, (_, index) => {
       const scenario = scenarios[index];
 
@@ -1086,9 +1138,16 @@ export async function POST(request: Request) {
         detailsForImage(pickedDetails, scenario.room, slot, detailsPerImage, pickedDetailColors)
       );
       const product = imageProducts[index] ?? null;
-      const extras = [houseLines, detailLines, wallArtLines(wallArt, slot), productLines(product)].filter(Boolean).join("\n\n");
+      const extras = [houseLines, detailLines, wallArtLines(wallArt, slot), productLines(product, photoFor(index) !== null)].filter(Boolean).join("\n\n");
 
       return `${prompt}\n\n${extras ? `${extras}\n\n` : ""}Variation ${index + 1} of ${maxImages}.`;
+    });
+
+    // The same prompts with the look-alike wording, for an image whose product photo gets turned away.
+    const wordPrompts = prompts.map((prompt, index) => {
+      const product = imageProducts[index];
+
+      return product && photoFor(index) ? prompt.replace(productLines(product, true), productLines(product, false)) : prompt;
     });
 
     // Exterior photos come after the interior images in the run.
@@ -1141,6 +1200,7 @@ export async function POST(request: Request) {
       ...(houseTour ? { houseTour } : {}),
       ...(isWallArtSet(wallArt) ? { wallArt: describeWallArt(wallArt) } : {}),
       ...(pickedProducts.length > 0 ? { products: describeProducts(pickedProducts) } : {}),
+      ...(productPhotos.size > 0 ? { productPhotos: `${productPhotos.size} matched to their photos` } : {}),
       ...(pickedDetails.length > 0 ? { details: describeDetails(pickedDetails) } : {}),
       // Only when exterior photos are on, so the details saved for interior-only batches do not change.
       ...(exteriorCount > 0 || accessoryCount > 0
@@ -1202,29 +1262,36 @@ export async function POST(request: Request) {
           const roomPrompt = prompts[item.index] as string;
           let response: ImagesResponse;
 
+          const photo = photoFor(item.index);
+          const wordsRoomPrompt = wordPrompts[item.index] as string;
+
           if (reference === null) {
-            // The set's first image, or one whose reference never came back: made from the prompt alone.
-            response = await generateImageWithFallback(roomPrompt, quality, size, fallbackSize);
+            // The set's first image, or one whose reference never came back: made from the prompt alone
+            // (plus the product's photo, when it has one).
+            response = photo
+              ? await makeWithProductPhoto({ prompt: roomPrompt, wordsPrompt: wordsRoomPrompt, photo, roomB64: null, quality, size, fallbackSize })
+              : await generateImageWithFallback(roomPrompt, quality, size, fallbackSize);
           } else if (item.kind === "angle") {
             const direction =
               cameraSelection === "standard"
                 ? setAngleDirection(item.angle)
                 : cameraAngleFor(cameraSelection, item.angle).direction;
-            response = await editImageWithFallback(
-              sameRoomPrompt(scenario.room, direction),
-              reference,
-              quality,
-              size,
-              fallbackSize
-            );
+            const anglePrompt = sameRoomPrompt(scenario.room, direction);
+            response = photo
+              ? await makeWithProductPhoto({ prompt: anglePrompt, wordsPrompt: anglePrompt, photo, roomB64: reference, quality, size, fallbackSize })
+              : await editImageWithFallback(anglePrompt, [roomReference(reference)], quality, size, fallbackSize);
           } else {
-            response = await editImageWithFallback(
-              sameHousePrompt(scenario.room, roomPrompt),
-              reference,
-              quality,
-              size,
-              fallbackSize
-            );
+            response = photo
+              ? await makeWithProductPhoto({
+                  prompt: sameHousePrompt(scenario.room, roomPrompt),
+                  wordsPrompt: sameHousePrompt(scenario.room, wordsRoomPrompt),
+                  photo,
+                  roomB64: reference,
+                  quality,
+                  size,
+                  fallbackSize,
+                })
+              : await editImageWithFallback(sameHousePrompt(scenario.room, roomPrompt), [roomReference(reference)], quality, size, fallbackSize);
           }
 
           return response.data?.find((image) => image.b64_json)?.b64_json ?? null;
@@ -1247,9 +1314,14 @@ export async function POST(request: Request) {
       for (let i = 0; i < allPrompts.length; i += CONCURRENCY) {
         const batch = allPrompts.slice(i, i + CONCURRENCY);
         const batchResults = await Promise.all(
-          batch.map((prompt) =>
-            generateImageWithFallback(prompt, quality, size, fallbackSize)
-          )
+          batch.map((prompt, position) => {
+            // Without room sets there is no tour order, so image i is interior i (when it is an interior).
+            const photo = i + position < interiorCount ? photoFor(i + position) : null;
+
+            return photo
+              ? makeWithProductPhoto({ prompt, wordsPrompt: wordPrompts[i + position] as string, photo, roomB64: null, quality, size, fallbackSize })
+              : generateImageWithFallback(prompt, quality, size, fallbackSize);
+          })
         );
 
         results.push(...batchResults);

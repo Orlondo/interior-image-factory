@@ -170,6 +170,22 @@ export function ProductsSection({ setup, update }: ProductsSectionProps) {
             ))}
           </SelectField>
         ) : null}
+
+        {products.length > 0 ? (
+          <SelectField
+            label="Product pictures"
+            value={setup.productMatch ? "match" : "words"}
+            onChange={(value) => update({ productMatch: value === "match" })}
+          >
+            <option value="match">Match the product photo (shows the generator the real item)</option>
+            <option value="words">Look-alike only (words, no photo)</option>
+          </SelectField>
+        ) : null}
+        {products.length > 0 && setup.productMatch ? (
+          <p className="text-xs text-[#98A2B3]">
+            Products with a picture are shown to the generator, so the item should look like the real one. A picture that cannot be downloaded falls back to a look-alike. Large runs sent as a batch always use look-alikes.
+          </p>
+        ) : null}
       </div>
     </SectionCard>
   );

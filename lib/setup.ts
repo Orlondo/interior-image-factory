@@ -104,6 +104,8 @@ export type Setup = {
   products: Product[];
   /** Every Nth image of a fitting room includes a product. */
   productEvery: number;
+  /** Show the image generator each product's photo, so the item matches. On by default. */
+  productMatch: boolean;
   /** What the run makes: interior rooms, exterior photos, accessory close-ups, or a mix (images are split evenly). */
   photoTypes: PhotoType[];
   /** Exterior choices. A group with nothing picked uses every option. */
@@ -156,6 +158,7 @@ export const DEFAULT_SETUP: Setup = {
   wallArt: EMPTY_WALL_ART,
   products: [],
   productEvery: PRODUCT_EVERY_DEFAULT,
+  productMatch: true,
   photoTypes: ["interior"],
   exterior: createEmptyExteriorOptions(),
   accessory: createEmptyAccessoryOptions(),
@@ -222,6 +225,8 @@ export function buildGeneratePayload(setup: Setup) {
     ...(setup.houseTour ? { houseTour: true } : {}),
     ...(isWallArtSet(setup.wallArt) ? { wallArt: setup.wallArt } : {}),
     ...(setup.products.length > 0 ? { products: setup.products, productEvery: setup.productEvery } : {}),
+    // Only sent when turned off, so the payload stays what it was.
+    ...(setup.products.length > 0 && !setup.productMatch ? { productMatch: false } : {}),
     ...(setup.details.length > 0
       ? { details: setup.details, detailColors: setup.detailColors, detailsPerImage: setup.detailsPerImage }
       : {}),
@@ -328,6 +333,7 @@ export function sanitizeSetup(raw: unknown): Setup {
     wallArt: sanitizeWallArt(source.wallArt),
     products: sanitizeProducts(source.products),
     productEvery: sanitizeProductEvery(source.productEvery),
+    productMatch: source.productMatch !== false,
     photoTypes: Array.isArray(source.photoTypes) ? effectivePhotoTypes(source.photoTypes as string[]) : d.photoTypes,
     exterior: sanitizeExterior(source.exterior),
     accessory: sanitizeAccessory(source.accessory),

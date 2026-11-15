@@ -1,7 +1,8 @@
 /**
  * Products: real items (a lamp, a rug, a faucet) the person found in shops. The app reads each product from
  * its link, guesses the rooms it fits from its name, and asks for a look-alike in some of the images. The
- * image generator only gets words, so what it draws is similar to the product, never the exact item.
+ * image generator gets words, and (when "Match the product photo" is on and the shop's picture can be
+ * downloaded) the picture itself, so it can draw the item closely. Without the picture it is a look-alike.
  * Each image that includes one records it, so the video app can list it with a timestamp.
  *
  * Nothing set means nothing changes: prompts, seeds and saved batch details stay as they were.
@@ -116,15 +117,30 @@ export function productRef(product: Product): ProductRef {
   return { name: product.name, link: product.link, price: product.price, image: product.image };
 }
 
-/** The prompt line for an image with a product, or "" for none. Says plainly it is a look-alike. */
-export function productLines(product: Product | null | undefined): string {
+/**
+ * The prompt line for an image with a product, or "" for none. Without the product's picture it says
+ * plainly it is a look-alike; with it (`matched`) the image generator is told to copy the pictured item.
+ */
+export function productLines(product: Product | null | undefined, matched = false): string {
   if (!product) return "";
 
   return [
-    "Product (include it clearly, naturally placed, as a similar-looking item, not a copy of any brand):",
+    matched
+      ? "Product (include it clearly, naturally placed; it must look exactly like the item in the attached product photo):"
+      : "Product (include it clearly, naturally placed, as a similar-looking item, not a copy of any brand):",
     `- ${product.look}`,
     "- Show no logos, brand names or readable labels on it.",
   ].join("\n");
+}
+
+/**
+ * Tells the image generator what each attached picture is. With a room reference the room comes first and
+ * the product photo second; without one the product photo is the only picture.
+ */
+export function productPhotoNote(withRoomReference: boolean): string {
+  return withRoomReference
+    ? "\n\nImage 1 is the room to keep. Image 2 is a photo of the product: the product in the finished picture must match image 2 exactly in shape, color, material and proportions. Do not copy image 2's background."
+    : "\n\nImage 1 is a photo of the product: the product in the finished picture must match it exactly in shape, color, material and proportions. Do not copy its background.";
 }
 
 export function describeProducts(products: readonly Product[]): string {

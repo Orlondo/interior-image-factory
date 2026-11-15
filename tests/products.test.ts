@@ -117,3 +117,29 @@ test("new setups start with a neutral base and decor-only color; saved ones keep
   // color intensity is untouched
   assert.equal(sanitizeSetup({}).colorIntensity, DEFAULT_SETUP.colorIntensity);
 });
+
+test("matching wording names the photo; look-alike wording does not", () => {
+  const matched = productLines(lamp, true);
+  const words = productLines(lamp, false);
+  assert.match(matched, /attached product photo/);
+  assert.doesNotMatch(words, /attached/);
+  assert.equal(productLines(lamp), words);
+  assert.equal(productLines(null, true), "");
+  assert.ok(matched.includes(lamp.look));
+});
+
+test("the picture note names each picture in order", async () => {
+  const { productPhotoNote } = await import("../lib/products");
+  assert.match(productPhotoNote(true), /Image 1 is the room[\s\S]*Image 2 is a photo of the product/);
+  assert.match(productPhotoNote(false), /^\n\nImage 1 is a photo of the product/);
+});
+
+test("the match switch is on by default and only sent when off", () => {
+  assert.equal(DEFAULT_SETUP.productMatch, true);
+  const withProducts = { ...DEFAULT_SETUP, products: [lamp] };
+  assert.equal("productMatch" in buildGeneratePayload(withProducts), false);
+  assert.equal(buildGeneratePayload({ ...withProducts, productMatch: false }).productMatch, false);
+  assert.equal("productMatch" in buildGeneratePayload({ ...DEFAULT_SETUP, productMatch: false }), false);
+  assert.equal(sanitizeSetup({ productMatch: false }).productMatch, false);
+  assert.equal(sanitizeSetup({}).productMatch, true);
+});
