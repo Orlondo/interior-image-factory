@@ -64,6 +64,14 @@ import {
   tourExteriors,
   tourOrder,
 } from "@/lib/houseProfile";
+import {
+  describeDetails,
+  detailsForImage,
+  roomDetailLines,
+  sanitizeDetailColors,
+  sanitizeDetails,
+  sanitizeDetailsPerImage,
+} from "@/lib/roomDetails";
 import { assignStyles, buildScenarioPlan, type PromptScenario } from "@/lib/scenarioPlan";
 import { cameraAngleFor } from "@/lib/promptBuilder/camera";
 import {
@@ -150,6 +158,9 @@ type GeneratePayload = {
   house?: unknown;
   /** A whole-house tour: a daytime exterior first, the rooms in order, then the same house at dusk. */
   houseTour?: boolean;
+  details?: unknown;
+  detailColors?: unknown;
+  detailsPerImage?: number;
 };
 
 const FILE_SIZE_TO_QUALITY: Record<FileSizeOption, "low" | "medium" | "high"> = {
@@ -362,6 +373,10 @@ function validateGeneratePayloadShape(payload: unknown): string[] {
         }
       });
     }
+  }
+
+  if ("detailsPerImage" in input && input.detailsPerImage !== undefined && typeof input.detailsPerImage !== "number") {
+    errors.push("detailsPerImage must be a number.");
   }
 
   if ("houseTour" in input && input.houseTour !== undefined && typeof input.houseTour !== "boolean") {
@@ -669,6 +684,9 @@ export async function POST(request: Request) {
     const houseProfile = sanitizeHouse(payload.house);
     const houseOn = isHouseSet(houseProfile);
     const houseTour = payload.houseTour === true;
+    const pickedDetails = sanitizeDetails(payload.details);
+    const pickedDetailColors = sanitizeDetailColors(payload.detailColors);
+    const detailsPerImage = sanitizeDetailsPerImage(payload.detailsPerImage);
 
     const viewSelection = houseProfile.view
       ? [houseProfile.view]
@@ -928,6 +946,7 @@ export async function POST(request: Request) {
       // Only when set, so seeds for ordinary batches do not change.
       ...(houseOn ? { house: houseProfile } : {}),
       ...(houseTour ? { houseTour } : {}),
+      ...(pickedDetails.length > 0 ? { details: pickedDetails, detailColors: pickedDetailColors, detailsPerImage } : {}),
     });
 
     const seededRandom = createSeededRandom(hashStringToSeed(seedInput));
@@ -1022,8 +1041,13 @@ export async function POST(request: Request) {
       );
 
       const houseLines = houseProfileLines(houseProfile);
+      const slot = scenarios.slice(0, index).filter((other) => other.room === scenario.room).length;
+      const detailLines = roomDetailLines(
+        detailsForImage(pickedDetails, scenario.room, slot, detailsPerImage, pickedDetailColors)
+      );
+      const extras = [houseLines, detailLines].filter(Boolean).join("\n\n");
 
-      return `${prompt}\n\n${houseLines ? `${houseLines}\n\n` : ""}Variation ${index + 1} of ${maxImages}.`;
+      return `${prompt}\n\n${extras ? `${extras}\n\n` : ""}Variation ${index + 1} of ${maxImages}.`;
     });
 
     // Exterior photos come after the interior images in the run.
@@ -1074,6 +1098,7 @@ export async function POST(request: Request) {
       ...(sameHouse ? { sameHouse } : {}),
       ...(houseOn ? { house: describeHouse(houseProfile) } : {}),
       ...(houseTour ? { houseTour } : {}),
+      ...(pickedDetails.length > 0 ? { details: describeDetails(pickedDetails) } : {}),
       // Only when exterior photos are on, so the details saved for interior-only batches do not change.
       ...(exteriorCount > 0 || accessoryCount > 0
         ? {
