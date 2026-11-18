@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChipGroup } from "@/components/ui-modernization";
+import { PagePasteBox } from "./PagePasteBox";
 import { rooms as allRooms } from "@/lib/combinations";
 import {
   MAX_PRODUCTS,
@@ -40,15 +41,16 @@ export function ProductsSection({ setup, update }: ProductsSectionProps) {
     update({ products: [...products, BLANK(id)] });
   };
 
-  const fill = async (product: Product) => {
-    if (!product.link.trim()) return;
+  /** Reads the product from its link, or (for a shop that blocks the app) from page data copied from the person's browser. */
+  const fill = async (product: Product, captured?: string) => {
+    if (!captured && !product.link.trim()) return;
     setBusy(product.id);
     setNote("");
     try {
-      const response = await fetch("/products/lookup", {
+      const response = await fetch(captured ? "/products/from-page" : "/products/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: product.link }),
+        body: JSON.stringify(captured ? { page: captured, url: product.link } : { url: product.link }),
       });
       const data = (await response.json()) as { error?: string; name?: string; price?: string; brand?: string; store?: string; image?: string; link?: string; rooms?: string[] };
 
@@ -140,6 +142,7 @@ export function ProductsSection({ setup, update }: ProductsSectionProps) {
                 onChange={(event) => edit(product.id, { store: event.target.value })}
               />
             </div>
+            <PagePasteBox busy={busy === product.id} onUse={(captured) => fill(product, captured)} />
             <input
               className="w-full rounded bg-[#0F1522] px-2 py-1 text-sm"
               value={product.look}

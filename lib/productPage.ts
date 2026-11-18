@@ -2,6 +2,7 @@ import http from "node:http";
 import https from "node:https";
 import { isIP } from "node:net";
 import { lookup } from "node:dns/promises";
+import { captureUrl } from "./pageCapture";
 import { guessRooms } from "./products";
 
 /**
@@ -286,4 +287,24 @@ export async function fetchProduct(raw: string): Promise<PageProduct & { link: s
   }
 
   return { ...product, link: page.url, rooms: guessRooms(product.name) };
+}
+
+const MAX_PASTE = 2_000_000;
+
+/**
+ * Reads a product from page data the person copied from their own browser (see pageCapture), for shops that
+ * turn away the app's own visits. Nothing is fetched. The link is the page's address when it came with the data.
+ */
+export function readProductFromPage(captured: string, url = ""): PageProduct & { link: string; rooms: string[] } {
+  if (captured.length > MAX_PASTE) throw new ProductPageError("That is too much to read. Use the bookmark to copy only the product data");
+  const link = /^https?:\/\//i.test(url.trim()) ? url.trim() : captureUrl(captured);
+  const product = parseProductPage(captured, link);
+
+  if (isBotCheck(captured) || isHoldingPage(product) || !(product.name || product.price || product.image || product.brand)) {
+    throw new ProductPageError(
+      "Nothing about a product was found in what you pasted. Open the product page itself, wait for it to finish loading, click the bookmark, then paste here"
+    );
+  }
+
+  return { ...product, link, rooms: guessRooms(product.name) };
 }

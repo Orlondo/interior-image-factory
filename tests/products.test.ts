@@ -60,7 +60,8 @@ test("nothing set changes nothing, and setup round trips", () => {
   assert.equal(payload.productEvery, 3);
 });
 
-import { checkPublicUrl, isBotCheck, isHoldingPage, parseProductPage } from "../lib/productPage";
+import { checkPublicUrl, isBotCheck, isHoldingPage, parseProductPage, readProductFromPage, ProductPageError } from "../lib/productPage";
+import { CAPTURE_BOOKMARKLET, captureUrl } from "../lib/pageCapture";
 
 test("a product page is read from JSON-LD, then Open Graph", () => {
   const ld = `<script type="application/ld+json">${JSON.stringify({
@@ -217,4 +218,39 @@ test("a shop's bot check is recognised, and a real page is not mistaken for one"
   assert.equal(isBotCheck("<html><body>Please wait while captcha-delivery.com checks you</body></html>"), true);
   assert.equal(isBotCheck(LAMPSPLUS), false);
   assert.equal(isBotCheck(LAMPSPLUS + "x".repeat(40000) + "datadome"), false);
+});
+
+test("page data copied from the person's own browser fills the product", () => {
+  const captured = `<!--url:https://www.lampsplus.com/p/julian/-->${LAMPSPLUS}`;
+  const got = readProductFromPage(captured);
+  assert.equal(got.price, "$499.99");
+  assert.equal(got.brand, "Possini Euro Design");
+  assert.equal(got.store, "Lamps Plus");
+  assert.equal(got.link, "https://www.lampsplus.com/p/julian/");
+  assert.ok(got.rooms.length >= 0);
+  assert.equal(readProductFromPage(LAMPSPLUS, "https://x.test/p").link, "https://x.test/p");
+  assert.equal(captureUrl(captured), "https://www.lampsplus.com/p/julian/");
+  assert.equal(captureUrl("no address"), "");
+});
+
+test("pasting nothing useful, a bot check, or too much is refused with a clear message", () => {
+  assert.throws(() => readProductFromPage("hello there"), ProductPageError);
+  assert.throws(() => readProductFromPage('<div id="sec-if-cpt-container">Powered and protected by Akamai</div>'), ProductPageError);
+  assert.throws(() => readProductFromPage("<title>Site Maintenance</title>"), ProductPageError);
+  assert.throws(() => readProductFromPage("x".repeat(2_000_001)), /too much/);
+});
+
+test("the bookmark copies the title, product tags and data, with the page address", async () => {
+  assert.ok(CAPTURE_BOOKMARKLET.startsWith("javascript:"));
+  const dom = `<html><head><title>Lamp</title><meta property="og:title" content="Lamp"><meta name="viewport" content="x"><script type="application/ld+json">{"@type":"Product","name":"Lamp"}</script></head><body><p>secret</p></body></html>`;
+  let copied = "";
+  const run = new Function("document", "location", "navigator", "alert", "prompt", CAPTURE_BOOKMARKLET.slice("javascript:".length));
+  run({ documentElement: { outerHTML: dom } }, { href: "https://shop.test/p/1" }, { clipboard: { writeText: async (text: string) => void (copied = text) } }, () => {}, () => {});
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.match(copied, /^<!--url:https:\/\/shop\.test\/p\/1-->/);
+  assert.match(copied, /<title>Lamp<\/title>/);
+  assert.match(copied, /og:title/);
+  assert.match(copied, /"@type":"Product"/);
+  assert.doesNotMatch(copied, /viewport|secret/);
+  assert.equal(readProductFromPage(copied).name, "Lamp");
 });
