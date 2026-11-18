@@ -60,7 +60,7 @@ test("nothing set changes nothing, and setup round trips", () => {
   assert.equal(payload.productEvery, 3);
 });
 
-import { checkPublicUrl, isHoldingPage, parseProductPage } from "../lib/productPage";
+import { checkPublicUrl, isBotCheck, isHoldingPage, parseProductPage } from "../lib/productPage";
 
 test("a product page is read from JSON-LD, then Open Graph", () => {
   const ld = `<script type="application/ld+json">${JSON.stringify({
@@ -187,4 +187,34 @@ test("a shop's holding page is not taken for the product", () => {
   assert.equal(isHoldingPage(parseProductPage("<title>Just a moment...</title>")), true);
   assert.equal(isHoldingPage(parseProductPage("<title>Harrow Nightstand</title><p>Price: $1,890</p>")), false);
   assert.equal(isHoldingPage({ name: "Site Maintenance", price: "$5" }), false);
+});
+
+/** The product data of a real Lamps Plus page as a browser sees it (trimmed): the page the apps are blocked from. */
+const LAMPSPLUS = `<html><head><title>Possini Euro Julian 22" Rustic Bronze Metal Drum 4-Light Ceiling Light - #7161X | Lamps Plus</title>
+<meta property="og:type" content="product">
+<meta property="og:image" content="https://image.lampsplus.com/is/image/b9gt8/julian__7161xcropped.jpg?qlt=70&amp;wid=480&amp;fmt=jpeg">
+<meta property="og:site_name" content="Lamps Plus - The Nation's Largest Lighting Retailer">
+<meta property="og:title" content="Possini Euro Julian 22&quot; Rustic Bronze Metal Drum 4-Light Ceiling Light - #7161X | Lamps Plus">
+<script type="application/ld+json">{"@context":"http://schema.org","@type":"Organization","name":"Lamps Plus"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org/","@type":"Product","brand":{"@type":"Brand","name":"Possini Euro Design"},
+"image":"https://image.lampsplus.com/is/image/b9gt8/julian__7161xcropped.jpg?qlt=70&amp;wid=480&amp;fmt=jpeg;",
+"name":"Possini Euro Julian 22&quot; Rustic Bronze Metal Drum 4-Light Ceiling Light",
+"offers":{"@type":"Offer","priceCurrency":"USD","price":"499.99","availability":"http://schema.org/InStock"}}</script></head></html>`;
+
+test("a real Lamps Plus page reads cleanly: name, price, maker, shop and picture", () => {
+  const got = parseProductPage(LAMPSPLUS, "https://www.lampsplus.com/p/julian/");
+  assert.equal(got.name, 'Possini Euro Julian 22" Rustic Bronze Metal Drum 4-Light Ceiling Light');
+  assert.equal(got.price, "$499.99");
+  assert.equal(got.brand, "Possini Euro Design");
+  assert.equal(got.store, "Lamps Plus");
+  assert.equal(got.image, "https://image.lampsplus.com/is/image/b9gt8/julian__7161xcropped.jpg?qlt=70&wid=480&fmt=jpeg");
+  assert.equal(isHoldingPage(got), false);
+});
+
+test("a shop's bot check is recognised, and a real page is not mistaken for one", () => {
+  const challenge = `<!DOCTYPE html><html><body><script src="/NMyg9YDR/x"></script><div id="sec-if-cpt-container" role="main"><p class="scf-akamai-protected-by">Powered and protected by Akamai</p></div></body></html>`;
+  assert.equal(isBotCheck(challenge), true);
+  assert.equal(isBotCheck("<html><body>Please wait while captcha-delivery.com checks you</body></html>"), true);
+  assert.equal(isBotCheck(LAMPSPLUS), false);
+  assert.equal(isBotCheck(LAMPSPLUS + "x".repeat(40000) + "datadome"), false);
 });

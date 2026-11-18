@@ -86,7 +86,7 @@ function brandName(value: unknown): string {
 /** The shop's name: the page's own site name, else the web address's main word (www.arhaus.com -> Arhaus). */
 function siteName(page: string, baseUrl: string): string {
   const named = meta(page, ["og:site_name"]);
-  if (named) return named.slice(0, 40);
+  if (named) return (named.split(/\s+[-–|]\s+/)[0] ?? named).slice(0, 40);
   try {
     const parts = new URL(baseUrl).hostname.toLowerCase().split(".").filter((part) => part && part !== "www");
     const word = parts.length >= 2 ? (parts[parts.length - 2] as string) : "";
@@ -151,6 +151,7 @@ export function parseProductPage(page: string, baseUrl = ""): PageProduct {
       found.image = "";
     }
   }
+  found.image = decode(found.image).replace(/;+$/, "");
   found.name = decode(found.name).replace(/\s+/g, " ").trim().slice(0, 120);
 
   return found;
@@ -160,6 +161,13 @@ export class ProductPageError extends Error {}
 
 /** A shop's holding page ("Site Maintenance", "Access Denied", "Just a moment…"): its title is not the product's name. */
 const HOLDING_PAGE = /^\s*(site maintenance|under maintenance|down for maintenance|we'?ll be right back|access denied|just a moment|attention required|service unavailable|temporarily unavailable|page not found|404\b|403\b|error\b)/i;
+
+/** A shop's "are you a person?" check (Akamai, Cloudflare and the like): it sends a small script page instead of the product. */
+const BOT_CHECK = /sec-if-cpt-container|protected by akamai|_Incapsula_Resource|challenge-platform|cf-browser-verification|px-captcha|captcha-delivery\.com|datadome/i;
+
+export function isBotCheck(body: string): boolean {
+  return body.length < 30000 && BOT_CHECK.test(body);
+}
 
 export function isHoldingPage(product: Pick<PageProduct, "name" | "price">): boolean {
   return HOLDING_PAGE.test(product.name) && !product.price;
@@ -263,6 +271,11 @@ export async function fetchProduct(raw: string): Promise<PageProduct & { link: s
   if (page.status < 200 || page.status >= 300) {
     throw new ProductPageError(
       `The page could not be opened (the shop answered ${page.status}). Some shops block automated visits; type the details in instead`
+    );
+  }
+  if (isBotCheck(page.body)) {
+    throw new ProductPageError(
+      "That shop checks that visitors are people, so the app cannot read the page. Type the details in yourself (open the page in your browser and copy the name, price and company)"
     );
   }
   const product = parseProductPage(page.body, page.url);
