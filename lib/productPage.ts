@@ -158,6 +158,13 @@ export function parseProductPage(page: string, baseUrl = ""): PageProduct {
 
 export class ProductPageError extends Error {}
 
+/** A shop's holding page ("Site Maintenance", "Access Denied", "Just a moment…"): its title is not the product's name. */
+const HOLDING_PAGE = /^\s*(site maintenance|under maintenance|down for maintenance|we'?ll be right back|access denied|just a moment|attention required|service unavailable|temporarily unavailable|page not found|404\b|403\b|error\b)/i;
+
+export function isHoldingPage(product: Pick<PageProduct, "name" | "price">): boolean {
+  return HOLDING_PAGE.test(product.name) && !product.price;
+}
+
 function isPrivate(address: string): boolean {
   if (address.includes(":")) {
     const a = address.toLowerCase();
@@ -259,6 +266,11 @@ export async function fetchProduct(raw: string): Promise<PageProduct & { link: s
     );
   }
   const product = parseProductPage(page.body, page.url);
+  if (isHoldingPage(product)) {
+    throw new ProductPageError(
+      `The shop answered with a holding page ("${product.name}") instead of the product, so nothing was filled in. Try again in a few minutes, or type the details in`
+    );
+  }
 
   return { ...product, link: page.url, rooms: guessRooms(product.name) };
 }

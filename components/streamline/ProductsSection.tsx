@@ -59,7 +59,8 @@ export function ProductsSection({ setup, update }: ProductsSectionProps) {
       const name = data.name || product.name;
       edit(product.id, {
         name,
-        look: product.look || name,
+        // The look follows the name unless the person wrote their own, so a better name replaces an old one.
+        look: !product.look || product.look === product.name ? name : product.look,
         price: data.price || product.price,
         brand: data.brand || product.brand || "",
         store: data.store || product.store || "",

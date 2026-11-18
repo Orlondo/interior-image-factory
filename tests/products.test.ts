@@ -60,7 +60,7 @@ test("nothing set changes nothing, and setup round trips", () => {
   assert.equal(payload.productEvery, 3);
 });
 
-import { checkPublicUrl, parseProductPage } from "../lib/productPage";
+import { checkPublicUrl, isHoldingPage, parseProductPage } from "../lib/productPage";
 
 test("a product page is read from JSON-LD, then Open Graph", () => {
   const ld = `<script type="application/ld+json">${JSON.stringify({
@@ -179,4 +179,12 @@ test("a product's maker and shop are kept and recorded on the image only when th
   assert.equal("brand" in (without[0] as object), false);
   assert.equal("brand" in productRef(without[0] as never), false);
   assert.equal("store" in productRef(without[0] as never), false);
+});
+
+test("a shop's holding page is not taken for the product", () => {
+  assert.equal(isHoldingPage(parseProductPage("<title>Site Maintenance</title>")), true);
+  assert.equal(isHoldingPage(parseProductPage("<title>Access Denied</title>")), true);
+  assert.equal(isHoldingPage(parseProductPage("<title>Just a moment...</title>")), true);
+  assert.equal(isHoldingPage(parseProductPage("<title>Harrow Nightstand</title><p>Price: $1,890</p>")), false);
+  assert.equal(isHoldingPage({ name: "Site Maintenance", price: "$5" }), false);
 });
