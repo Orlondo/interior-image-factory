@@ -281,7 +281,7 @@ export async function fetchProduct(raw: string): Promise<PageProduct & { link: s
   const product = parseProductPage(page.body, page.url);
   if (isHoldingPage(product)) {
     throw new ProductPageError(
-      `The shop answered with a holding page ("${product.name}") instead of the product, so nothing was filled in. Try again in a few minutes, or type the details in`
+      `The shop answered with a stand-in page ("${product.name}") instead of the product, so nothing was filled in. That is either real maintenance or the shop turning away automated visits (most likely, if the link opens normally in your browser), so waiting may not help. Type the details in yourself`
     );
   }
 
