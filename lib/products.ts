@@ -19,8 +19,10 @@ export type Product = {
   look: string;
   link: string;
   price: string;
-  /** The company the product comes from (its brand, else the shop), shown on the video's Shop the Look card. */
+  /** The company that makes it, shown on the video's Shop the Look card. */
   brand?: string;
+  /** The shop it is sold by, shown beside the maker on the video's Shop the Look card. */
+  store?: string;
   /** The product picture's address, kept for the video app's Shop the Look card. */
   image: string;
   /** Rooms it may appear in. Empty = any room. */
@@ -30,7 +32,7 @@ export type Product = {
 };
 
 /** What an image records about the product it includes. */
-export type ProductRef = { name: string; link: string; price: string; image: string; brand?: string };
+export type ProductRef = { name: string; link: string; price: string; image: string; brand?: string; store?: string };
 
 const LIVING = ["living room", "family room", "sunken living room", "library", "sunroom"];
 const SLEEP = ["bedroom", "nursery"];
@@ -85,6 +87,7 @@ export function sanitizeProducts(raw: unknown): Product[] {
       link: /^https?:\/\//i.test(link) ? link : "",
       price: text(source.price, 20),
       ...(text(source.brand, 40) ? { brand: text(source.brand, 40) } : {}),
+      ...(text(source.store, 40) ? { store: text(source.store, 40) } : {}),
       image: /^https?:\/\//i.test(text(source.image, 500)) ? text(source.image, 500) : "",
       rooms,
       guessed: source.guessed === true,
@@ -117,8 +120,15 @@ export function productForImage(products: readonly Product[], room: string, slot
 }
 
 export function productRef(product: Product): ProductRef {
-  // The company is recorded only when there is one, so older saved batches read as before.
-  return { name: product.name, link: product.link, price: product.price, image: product.image, ...(product.brand ? { brand: product.brand } : {}) };
+  // The maker and shop are recorded only when there are some, so older saved batches read as before.
+  return {
+    name: product.name,
+    link: product.link,
+    price: product.price,
+    image: product.image,
+    ...(product.brand ? { brand: product.brand } : {}),
+    ...(product.store ? { store: product.store } : {}),
+  };
 }
 
 /**

@@ -10,8 +10,8 @@ import { guessRooms } from "./products";
  * The price is a snapshot of that moment.
  */
 
-/** `brand` is the company the product comes from: its own brand, else the shop's name. */
-export type PageProduct = { name: string; price: string; image: string; brand: string };
+/** `brand` is the company that makes the product; `store` is the shop the page belongs to. */
+export type PageProduct = { name: string; price: string; image: string; brand: string; store: string };
 
 const SYMBOLS: Record<string, string> = { USD: "$", EUR: "€", GBP: "£", CAD: "CA$", AUD: "A$", JPY: "¥" };
 
@@ -98,7 +98,7 @@ function siteName(page: string, baseUrl: string): string {
 }
 
 export function parseProductPage(page: string, baseUrl = ""): PageProduct {
-  const found: PageProduct = { name: "", price: "", image: "", brand: "" };
+  const found: PageProduct = { name: "", price: "", image: "", brand: "", store: "" };
 
   for (const block of page.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
     let data: unknown;
@@ -143,7 +143,7 @@ export function parseProductPage(page: string, baseUrl = ""): PageProduct {
     text ||= visibleText(page);
     found.brand = brandName(text.match(/\bBrand\s*(?::|\|)\s*(?:\|\s*)?([^|]{2,40}?)\s*(?:\||$)/)?.[1]);
   }
-  found.brand ||= siteName(page, baseUrl);
+  found.store = siteName(page, baseUrl);
   if (found.image && baseUrl) {
     try {
       found.image = new URL(found.image, baseUrl).toString();
