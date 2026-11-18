@@ -276,13 +276,13 @@ export async function fetchProduct(raw: string): Promise<PageProduct & { link: s
   }
   if (isBotCheck(page.body)) {
     throw new ProductPageError(
-      "That shop checks that visitors are people, so the app cannot read the page. Type the details in yourself (open the page in your browser and copy the name, price and company)"
+      "That shop checks that visitors are people, so the app cannot read the page. Open \"The shop blocks the app?\" under this product to fill it from your own browser, or type the details in"
     );
   }
   const product = parseProductPage(page.body, page.url);
   if (isHoldingPage(product)) {
     throw new ProductPageError(
-      `The shop answered with a stand-in page ("${product.name}") instead of the product, so nothing was filled in. That is either real maintenance or the shop turning away automated visits (most likely, if the link opens normally in your browser), so waiting may not help. Type the details in yourself`
+      `The shop answered with a stand-in page ("${product.name}") instead of the product, so nothing was filled in. That is either real maintenance or the shop turning away automated visits (most likely, if the link opens normally in your browser), so waiting may not help. Open \"The shop blocks the app?\" under this product to fill it from your own browser, or type the details in`
     );
   }
 
