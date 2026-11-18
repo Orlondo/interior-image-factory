@@ -50,7 +50,7 @@ export function ProductsSection({ setup, update }: ProductsSectionProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: product.link }),
       });
-      const data = (await response.json()) as { error?: string; name?: string; price?: string; image?: string; link?: string; rooms?: string[] };
+      const data = (await response.json()) as { error?: string; name?: string; price?: string; brand?: string; image?: string; link?: string; rooms?: string[] };
 
       if (!response.ok) {
         setNote(data.error ?? "The product could not be read");
@@ -61,15 +61,16 @@ export function ProductsSection({ setup, update }: ProductsSectionProps) {
         name,
         look: product.look || name,
         price: data.price || product.price,
+        brand: data.brand || product.brand || "",
         image: data.image || product.image,
         link: data.link || product.link,
         rooms: product.rooms.length > 0 && !product.guessed ? product.rooms : data.rooms ?? guessRooms(name),
         guessed: !(product.rooms.length > 0 && !product.guessed),
       });
-      const missing = [!data.name && "name", !data.price && "price", !data.image && "picture"].filter(Boolean);
+      const missing = [!data.name && "name", !data.price && "price", !data.brand && "company", !data.image && "picture"].filter(Boolean);
       setNote(
         missing.length === 0
-          ? "Found the name, price and picture. The price is as of now; check it before you publish."
+          ? "Found the name, company, price and picture. The price is as of now; check it before you publish."
           : `Could not find the ${missing.join(", ")}. Type it in yourself.`
       );
     } catch {
@@ -123,6 +124,12 @@ export function ProductsSection({ setup, update }: ProductsSectionProps) {
                 value={product.price}
                 placeholder="Price"
                 onChange={(event) => edit(product.id, { price: event.target.value })}
+              />
+              <input
+                className="w-36 rounded bg-[#0F1522] px-2 py-1 text-sm"
+                value={product.brand ?? ""}
+                placeholder="Company"
+                onChange={(event) => edit(product.id, { brand: event.target.value })}
               />
             </div>
             <input

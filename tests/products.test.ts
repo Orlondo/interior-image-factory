@@ -5,6 +5,7 @@ import {
   guessRooms,
   productForImage,
   productLines,
+  productRef,
   sanitizeProductEvery,
   sanitizeProducts,
 } from "../lib/products";
@@ -65,10 +66,10 @@ test("a product page is read from JSON-LD, then Open Graph", () => {
   const ld = `<script type="application/ld+json">${JSON.stringify({
     "@graph": [{ "@type": "Product", name: "Brass arc lamp", image: ["/i/lamp.jpg"], offers: { price: "79.5", priceCurrency: "USD" } }],
   })}</script>`;
-  assert.deepEqual(parseProductPage(ld, "https://shop.test/p/lamp"), { name: "Brass arc lamp", price: "$79.50", image: "https://shop.test/i/lamp.jpg" });
+  assert.deepEqual(parseProductPage(ld, "https://shop.test/p/lamp"), { name: "Brass arc lamp", price: "$79.50", image: "https://shop.test/i/lamp.jpg", brand: "Shop" });
   const og = '<meta property="og:title" content="Linen &amp; cotton throw"><meta property="og:image" content="//cdn.test/t.jpg"><meta property="product:price:amount" content="45"><meta property="product:price:currency" content="EUR">';
-  assert.deepEqual(parseProductPage(og, "https://shop.test/x"), { name: "Linen & cotton throw", price: "€45", image: "https://cdn.test/t.jpg" });
-  assert.deepEqual(parseProductPage("<p>hi</p>"), { name: "", price: "", image: "" });
+  assert.deepEqual(parseProductPage(og, "https://shop.test/x"), { name: "Linen & cotton throw", price: "€45", image: "https://cdn.test/t.jpg", brand: "Shop" });
+  assert.deepEqual(parseProductPage("<p>hi</p>"), { name: "", price: "", image: "", brand: "" });
 });
 
 test("only public web addresses are opened", async () => {
@@ -142,4 +143,35 @@ test("the match switch is on by default and only sent when off", () => {
   assert.equal("productMatch" in buildGeneratePayload({ ...DEFAULT_SETUP, productMatch: false }), false);
   assert.equal(sanitizeSetup({ productMatch: false }).productMatch, false);
   assert.equal(sanitizeSetup({}).productMatch, true);
+});
+
+test("price and company are read from visible page text when the page has no price data", () => {
+  const page = `<html><head><title>Julian | Lamps Plus</title><meta property="og:title" content="Possini Euro Julian 22 Inch Drum Ceiling Light"></head><body>
+<div><span>Price:</span> <span>$499.99</span></div><script>var related = {"price": "12.00"};</script>
+<table><tr><td>Brand</td><td>Possini Euro Design</td></tr><tr><td>Color</td><td>Bronze</td></tr></table></body></html>`;
+  const got = parseProductPage(page, "https://www.lampsplus.com/p/julian/");
+  assert.equal(got.price, "$499.99");
+  assert.equal(got.brand, "Possini Euro Design");
+  assert.equal(parseProductPage("<p>Price: $1,299.50</p>").price, "$1,299.50");
+  assert.equal(parseProductPage('<span itemprop="price" content="64.00"></span>').price, "$64");
+  assert.equal(parseProductPage('<script>var x = {"price": "12.00"};</script>').price, "");
+});
+
+test("the company comes from the product's brand, else the shop's name", () => {
+  const ld = JSON.stringify({ "@type": "Product", name: "Lamp", brand: { "@type": "Brand", name: "Visual Comfort" } });
+  assert.equal(parseProductPage(`<script type="application/ld+json">${ld}</script>`, "https://shop.test/x").brand, "Visual Comfort");
+  assert.equal(parseProductPage('<meta property="product:brand" content="Rejuvenation">', "https://shop.test/x").brand, "Rejuvenation");
+  assert.equal(parseProductPage("<p>Brand: Hunter Fan</p>").brand, "Hunter Fan");
+  assert.equal(parseProductPage('<meta property="og:site_name" content="Arhaus">', "https://www.arhaus.com/p").brand, "Arhaus");
+  assert.equal(parseProductPage("<p>x</p>", "https://www.arhaus.com/products/x").brand, "Arhaus");
+  assert.equal(parseProductPage("<p>x</p>").brand, "");
+});
+
+test("a product's company is kept and recorded on the image only when there is one", () => {
+  const withBrand = sanitizeProducts([{ name: "Julian light", brand: " Possini Euro Design ", link: "https://s.test/x" }]);
+  assert.equal(withBrand[0]?.brand, "Possini Euro Design");
+  assert.equal(productRef(withBrand[0] as never).brand, "Possini Euro Design");
+  const without = sanitizeProducts([{ name: "Plain lamp" }]);
+  assert.equal("brand" in (without[0] as object), false);
+  assert.equal("brand" in productRef(without[0] as never), false);
 });

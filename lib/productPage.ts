@@ -10,7 +10,8 @@ import { guessRooms } from "./products";
  * The price is a snapshot of that moment.
  */
 
-export type PageProduct = { name: string; price: string; image: string };
+/** `brand` is the company the product comes from: its own brand, else the shop's name. */
+export type PageProduct = { name: string; price: string; image: string; brand: string };
 
 const SYMBOLS: Record<string, string> = { USD: "$", EUR: "€", GBP: "£", CAD: "CA$", AUD: "A$", JPY: "¥" };
 
@@ -66,8 +67,38 @@ function meta(page: string, names: string[]): string {
   return "";
 }
 
+/** The page's text with tags turned into "|" separators (scripts and styles dropped): "Brand | Possini Euro Design". */
+function visibleText(page: string): string {
+  const body = page
+    .replace(/<(script|style|noscript)\b[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<[^>]+>/g, "|");
+
+  return decode(body).replace(/[ \t\r\n\u00a0]+/g, " ").replace(/(\s*\|\s*)+/g, " | ");
+}
+
+function brandName(value: unknown): string {
+  const item = Array.isArray(value) ? value[0] : value;
+  const name = typeof item === "object" && item !== null ? (item as Record<string, unknown>).name : item;
+
+  return typeof name === "string" ? decode(name).replace(/\s+/g, " ").trim().slice(0, 40) : "";
+}
+
+/** The shop's name: the page's own site name, else the web address's main word (www.arhaus.com -> Arhaus). */
+function siteName(page: string, baseUrl: string): string {
+  const named = meta(page, ["og:site_name"]);
+  if (named) return named.slice(0, 40);
+  try {
+    const parts = new URL(baseUrl).hostname.toLowerCase().split(".").filter((part) => part && part !== "www");
+    const word = parts.length >= 2 ? (parts[parts.length - 2] as string) : "";
+
+    return word ? word.charAt(0).toUpperCase() + word.slice(1) : "";
+  } catch {
+    return "";
+  }
+}
+
 export function parseProductPage(page: string, baseUrl = ""): PageProduct {
-  const found: PageProduct = { name: "", price: "", image: "" };
+  const found: PageProduct = { name: "", price: "", image: "", brand: "" };
 
   for (const block of page.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
     let data: unknown;
@@ -81,6 +112,7 @@ export function parseProductPage(page: string, baseUrl = ""): PageProduct {
       if (!kinds.includes("Product")) continue;
       found.name ||= first(node.name);
       found.image ||= first(node.image);
+      found.brand ||= brandName(node.brand) || brandName(node.manufacturer);
       for (const offer of nodes(node.offers ?? [])) {
         const amount = offer.price ?? offer.lowPrice;
         if (amount !== undefined && amount !== "" && !found.price) found.price = priceText(amount, offer.priceCurrency);
@@ -95,6 +127,23 @@ export function parseProductPage(page: string, baseUrl = ""): PageProduct {
     const amount = meta(page, ["product:price:amount", "og:price:amount", "price"]);
     if (amount) found.price = priceText(amount, meta(page, ["product:price:currency", "og:price:currency", "priceCurrency"]));
   }
+  found.brand ||= brandName(meta(page, ["product:brand", "og:brand", "brand"]));
+  let text = "";
+  if (!found.price) {
+    // Some shops put the price only in the visible page ("Price: $499.99"), or in a tag marked as the price.
+    const tag = page.match(/<[^>]+\b(?:itemprop\s*=\s*["']price["']|data-price)[^>]*>/i)?.[0];
+    let amount = tag?.match(/(?:content|data-price)\s*=\s*["']\s*\$?([\d,]+(?:\.\d{1,2})?)\s*["']/i)?.[1];
+    if (!amount) {
+      text = visibleText(page);
+      amount = text.match(/\bPrice\s*:?\s*(?:\|\s*)?\$\s*([\d,]+(?:\.\d{1,2})?)/i)?.[1];
+    }
+    if (amount) found.price = priceText(amount, "");
+  }
+  if (!found.brand) {
+    text ||= visibleText(page);
+    found.brand = brandName(text.match(/\bBrand\s*(?::|\|)\s*(?:\|\s*)?([^|]{2,40}?)\s*(?:\||$)/)?.[1]);
+  }
+  found.brand ||= siteName(page, baseUrl);
   if (found.image && baseUrl) {
     try {
       found.image = new URL(found.image, baseUrl).toString();
